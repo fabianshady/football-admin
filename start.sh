@@ -6,7 +6,7 @@ echo "⚽ Conectando a la base de datos..."
 # AGREGAMOS: --skip-generate
 # Esto evita el error de "Cannot find module ... wasm" y hace el arranque más rápido
 echo "🚀 Corriendo prisma db push..."
-npx prisma db push --skip-generate
+npx prisma db push
 
 # echo "🌱 Sembrando datos (Seeding)..."
 # if [ -f ./prisma/seed.js ]; then
