@@ -14,7 +14,7 @@ COPY package*.json ./
 
 # Install all dependencies (dev included, needed for build stage)
 # --ignore-scripts prevents postinstall hooks from running prematurely
-RUN npm install --ignore-scripts
+RUN npm ci --ignore-scripts
 
 # =============================================================================
 # STAGE 2: BUILDER
