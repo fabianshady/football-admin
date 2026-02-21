@@ -2,7 +2,7 @@
 # STAGE 1: DEPENDENCIES
 # Install all Node.js dependencies (including devDependencies for TS compilation)
 # =============================================================================
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 # libc6-compat is required for Next.js to work properly on Alpine Linux
 # openssl is needed by Prisma's query engine
@@ -20,7 +20,7 @@ RUN npm ci --ignore-scripts
 # STAGE 2: BUILDER
 # Generate Prisma client, compile seed script, and build the Next.js app
 # =============================================================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 RUN apk add --no-cache libc6-compat openssl
 
@@ -48,7 +48,7 @@ RUN npm run build
 # STAGE 3: RUNNER (PRODUCTION)
 # Minimal image with only the files needed to run the application
 # =============================================================================
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
