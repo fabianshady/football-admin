@@ -1,0 +1,86 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id        String   @id @default(uuid())
+  name      String
+  dorsal    Int
+  // Guardamos las posiciones como un array de strings (ej: ["Defensa", "Medio"])
+  positions String[] 
+  active    Boolean  @default(true)
+  
+  // Relaciones
+  payments     Payment[]
+  matchSquads  MatchSquad[]
+  goals        Goal[]
+  
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id @default(uuid())
+  name      String   // Ej: "Entrenamiento Enero", "Arbitraje Final"
+  cost      Float    // Lo que paga CADA jugador
+  date      DateTime
+  
+  // Relaciones
+  payments  Payment[]
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  paid      Boolean  @default(false)
+  
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+  
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+
+  @@unique([playerId, eventId]) // Un jugador no puede tener doble deuda del mismo evento
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  myTeam      String   // Ej: "Filial Sub-20"
+  rivalTeam   String
+  myPos       Int      // Tu posición en la tabla
+  rivalPos    Int      // Posición del rival
+  date        DateTime
+  location    String
+  scoreHome   Int      @default(0)
+  scoreAway   Int      @default(0)
+  
+  // Relaciones
+  squad       MatchSquad[] // Los convocados
+  goals       Goal[]       // Goles registrados en este partido
+}
+
+model MatchSquad {
+  id        String @id @default(uuid())
+  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId   String
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+
+  @@unique([matchId, playerId])
+}
+
+model Goal {
+  id        String @id @default(uuid())
+  minute    Int?
+  
+  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId   String
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+}
