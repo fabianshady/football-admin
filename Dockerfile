@@ -35,10 +35,6 @@ COPY . .
 # 1. Generate the Prisma client based on the schema
 RUN npx prisma generate
 
-# 2. Compile the TypeScript seed script to plain JS using esbuild
-#    This avoids needing ts-node in the production image
-RUN npx esbuild prisma/seed.ts --bundle --platform=node --outfile=prisma/seed.js
-
 # 3. Build the Next.js application
 #    Requires `output: 'standalone'` in next.config.mjs for optimized output
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -73,12 +69,6 @@ COPY --from=builder /app/public ./public
 # The standalone folder contains a self-sufficient server.js and minimal node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# -- Copy Prisma schema, migrations, and the compiled seed script --
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-# Copy the Prisma query engine binary for Alpine (musl)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma/client/libquery_engine-linux-musl-*.so.node ./prisma/
 
 # -- Copy and prepare the entrypoint script --
 COPY --chown=nextjs:nodejs start.sh ./start.sh
