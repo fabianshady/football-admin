@@ -49,7 +49,7 @@ export default function RootLayout({
             </nav>
 
             <div className="p-4 text-xs text-gray-500 border-t border-gray-800 text-center">
-              Fabian Mendoza
+              fabianshady &copy; {new Date().getFullYear()}<br />
             </div>
           </aside>
         </MobileMenuButton>
