@@ -1,63 +1,59 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import { v4 as uuidv4 } from 'uuid'
+import { supabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
 
-// 1. Obtener Top Goleadores (Para el Leaderboard)
+// 1. Top Goleadores
 export async function getTopScorers() {
-  const players = await prisma.player.findMany({
-    where: { active: true },
-    include: {
-      goals: true,
-      matchSquads: true, // Incluir partidos jugados
-    }
-  })
+  const { data: players, error } = await supabase
+    .from('Player')
+    .select('*, goals:Goal(*), matchSquads:MatchSquad(*)')
+    .eq('active', true)
+  if (error) throw new Error(error.message)
 
-  const scorers = players
+  return (players ?? [])
     .map(p => ({
       name: p.name,
       dorsal: p.dorsal,
-      goals: p.goals.length,
-      matchesPlayed: p.matchSquads.length, // Agregar partidos jugados
+      goals: (p.goals as any[]).length,
+      matchesPlayed: (p.matchSquads as any[]).length,
     }))
-    .filter(p => p.goals > 0) // Solo mostrar jugadores con goles
+    .filter(p => p.goals > 0)
     .sort((a, b) => b.goals - a.goals)
-
-  return scorers
 }
 
-// 2. Obtener Partidos con sus goles desglosados
+// 2. Partidos con goles desglosados
 export async function getMatchesWithGoals() {
-  return await prisma.match.findMany({
-    orderBy: { date: 'desc' },
-    include: {
-      squad: {
-        include: {
-            player: true 
-        }
-      },
-      goals: true // Traemos todos los goles del partido
-    }
-  })
+  const { data, error } = await supabase
+    .from('Match')
+    .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*)')
+    .order('date', { ascending: false })
+  if (error) throw new Error(error.message)
+  return data ?? []
 }
 
-// 3. ¡GOL! (Agregar)
+// 3. ¡GOL!
 export async function addGoal(matchId: string, playerId: string) {
-  await prisma.goal.create({
-    data: { matchId, playerId }
-  })
+  const { error } = await supabase.from('Goal').insert({ id: uuidv4(), matchId, playerId })
+  if (error) throw new Error(error.message)
   revalidatePath('/admin/goals')
 }
 
 // 4. VAR (Quitar gol)
 export async function removeGoal(matchId: string, playerId: string) {
-  // Buscamos UN gol de este vato en este partido (el primero que salga)
-  const goal = await prisma.goal.findFirst({
-    where: { matchId, playerId }
-  })
+  const { data: goal, error: findErr } = await supabase
+    .from('Goal')
+    .select('id')
+    .eq('matchId', matchId)
+    .eq('playerId', playerId)
+    .limit(1)
+    .maybeSingle()
+  if (findErr) throw new Error(findErr.message)
 
   if (goal) {
-    await prisma.goal.delete({ where: { id: goal.id } })
+    const { error: deleteErr } = await supabase.from('Goal').delete().eq('id', goal.id)
+    if (deleteErr) throw new Error(deleteErr.message)
     revalidatePath('/admin/goals')
   }
 }

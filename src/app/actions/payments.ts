@@ -1,68 +1,74 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import { v4 as uuidv4 } from 'uuid'
+import { supabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
 
 // 1. Obtener la data para la matriz
 export async function getPaymentMatrix() {
-  // Traemos eventos ordenados del más reciente al más viejo
-  const events = await prisma.event.findMany({
-    orderBy: { date: 'desc' },
-    include: { payments: true } 
-  })
+  const { data: events, error: eventsErr } = await supabase
+    .from('Event')
+    .select('*, payments:Payment(*)')
+    .order('date', { ascending: false })
+  if (eventsErr) throw new Error(eventsErr.message)
 
-  // Traemos jugadores con sus pagos
-  const players = await prisma.player.findMany({
-    orderBy: { name: 'asc' },
-    include: { payments: true }
-  })
+  const { data: players, error: playersErr } = await supabase
+    .from('Player')
+    .select('*, payments:Payment(*)')
+    .order('name', { ascending: true })
+  if (playersErr) throw new Error(playersErr.message)
 
-  return { events, players }
+  return { events: events ?? [], players: players ?? [] }
 }
 
-// 2. Crear Evento y endeudar a la raza
+// 2. Crear Evento y endeudar a todos los activos
 export async function createEvent(formData: FormData) {
   const name = formData.get('name') as string
   const cost = parseFloat(formData.get('cost') as string)
-  const date = new Date(formData.get('date') as string)
+  const date = formData.get('date') as string
+  const id = uuidv4()
 
-  // Primero creamos el evento
-  const newEvent = await prisma.event.create({
-    data: { name, cost, date }
-  })
+  const { data: newEvent, error: eventErr } = await supabase
+    .from('Event')
+    .insert({ id, name, cost, date })
+    .select()
+    .single()
+  if (eventErr) throw new Error(eventErr.message)
 
-  // Buscamos a los jugadores activos para cobrarles
-  const activePlayers = await prisma.player.findMany({
-    where: { active: true },
-    select: { id: true }
-  })
+  const { data: activePlayers, error: playersErr } = await supabase
+    .from('Player')
+    .select('id')
+    .eq('active', true)
+  if (playersErr) throw new Error(playersErr.message)
 
-  // Bulk insert de los pagos (deudas)
-  if (activePlayers.length > 0) {
-    await prisma.payment.createMany({
-      data: activePlayers.map(p => ({
+  if (activePlayers && activePlayers.length > 0) {
+    const { error: paymentsErr } = await supabase
+      .from('Payment')
+      .insert(activePlayers.map(p => ({
+        id: uuidv4(),
         playerId: p.id,
         eventId: newEvent.id,
-        paid: false // Nacen debiendo
-      }))
-    })
+        paid: false,
+      })))
+    if (paymentsErr) throw new Error(paymentsErr.message)
   }
 
   revalidatePath('/admin/payments')
 }
 
-// 3. Pagar o des-pagar (Toggle)
+// 3. Toggle de pago
 export async function togglePayment(paymentId: string, currentStatus: boolean) {
-  await prisma.payment.update({
-    where: { id: paymentId },
-    data: { paid: !currentStatus }
-  })
+  const { error } = await supabase
+    .from('Payment')
+    .update({ paid: !currentStatus })
+    .eq('id', paymentId)
+  if (error) throw new Error(error.message)
   revalidatePath('/admin/payments')
 }
 
-// 4. Borrar evento (y sus deudas asociadas por cascada)
+// 4. Borrar evento (pagos en cascada por FK en DB)
 export async function deleteEvent(id: string) {
-  // Con onDelete: Cascade, Prisma eliminará automáticamente los pagos relacionados
-  await prisma.event.delete({ where: { id } })
+  const { error } = await supabase.from('Event').delete().eq('id', id)
+  if (error) throw new Error(error.message)
   revalidatePath('/admin/payments')
 }

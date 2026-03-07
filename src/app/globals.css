@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Prevent horizontal scroll on mobile */
 html, body {
@@ -15,22 +13,21 @@ html, body {
   }
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
-/* Better form styling on mobile */
+/* Prevents iOS zoom on focus */
 input, select, textarea {
-  font-size: 16px; /* Prevents iOS zoom on focus */
+  font-size: 16px;
 }
 
 body {
-  background-color: #f9fafb; /* gray-50 */
+  background-color: #f8fafc; /* slate-50 */
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #111827; /* gray-900 */
+    background-color: #0f172a; /* slate-900 */
   }
 }

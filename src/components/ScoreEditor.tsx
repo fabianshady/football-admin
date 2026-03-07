@@ -33,37 +33,37 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
   if (isEditing) {
     return (
       <div className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <input
             type="number"
             min="0"
             value={scoreHome}
             onChange={(e) => setScoreHome(parseInt(e.target.value) || 0)}
-            className="w-10 h-8 text-center border dark:border-gray-600 rounded text-sm font-bold bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            className="w-10 h-9 text-center border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             disabled={isPending}
           />
-          <span className="text-gray-400 font-bold">-</span>
+          <span className="text-slate-400 font-bold text-xs">—</span>
           <input
             type="number"
             min="0"
             value={scoreAway}
             onChange={(e) => setScoreAway(parseInt(e.target.value) || 0)}
-            className="w-10 h-8 text-center border dark:border-gray-600 rounded text-sm font-bold bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            className="w-10 h-9 text-center border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             disabled={isPending}
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded hover:bg-green-600 disabled:opacity-50"
+            className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg disabled:opacity-50 transition"
           >
-            {isPending ? '...' : '✓'}
+            {isPending ? '…' : '✓ OK'}
           </button>
           <button
             onClick={handleCancel}
             disabled={isPending}
-            className="text-[10px] bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-0.5 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+            className="text-[10px] font-bold bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition"
           >
             ✕
           </button>
@@ -75,14 +75,16 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
   return (
     <button
       onClick={() => setIsEditing(true)}
-      className={`px-3 py-1 rounded-lg font-mono font-bold text-lg sm:text-xl cursor-pointer hover:ring-2 hover:ring-blue-300 transition ${
-        isWin ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
-        isLoss ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
-        'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+      className={`px-4 py-2 rounded-xl font-mono font-black text-xl cursor-pointer hover:ring-2 hover:ring-blue-400/50 hover:scale-105 transition-all ${
+        isWin
+          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+          : isLoss
+          ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400'
+          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
       }`}
       title="Clic para editar marcador"
     >
-      {initialHome} - {initialAway}
+      {initialHome}–{initialAway}
     </button>
   )
 }
