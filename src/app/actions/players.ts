@@ -1,11 +1,12 @@
 'use server'
 
 import { v4 as uuidv4 } from 'uuid'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // Obtener todos los cracks
 export async function getPlayers() {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('Player')
     .select('*')
@@ -16,6 +17,7 @@ export async function getPlayers() {
 
 // Obtener solo los activos (para convocatorias)
 export async function getActivePlayers() {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('Player')
     .select('*')
@@ -27,6 +29,7 @@ export async function getActivePlayers() {
 
 // Crear o Editar Jugador
 export async function savePlayer(formData: FormData) {
+  const supabase = await createClient()
   const id = formData.get('id') as string
   const name = formData.get('name') as string
   const dorsal = parseInt(formData.get('dorsal') as string)
@@ -48,6 +51,7 @@ export async function savePlayer(formData: FormData) {
 
 // Cambiar estado Activo/Inactivo
 export async function togglePlayerStatus(id: string, currentStatus: boolean) {
+  const supabase = await createClient()
   const { error } = await supabase
     .from('Player')
     .update({ active: !currentStatus })
@@ -58,6 +62,7 @@ export async function togglePlayerStatus(id: string, currentStatus: boolean) {
 
 // Eliminar jugador (las relaciones con ON DELETE CASCADE se eliminan automáticamente)
 export async function deletePlayer(id: string) {
+  const supabase = await createClient()
   const { error } = await supabase.from('Player').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/players')

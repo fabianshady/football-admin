@@ -1,11 +1,12 @@
 'use server'
 
 import { v4 as uuidv4 } from 'uuid'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // 1. Top Goleadores
 export async function getTopScorers() {
+  const supabase = await createClient()
   const { data: players, error } = await supabase
     .from('Player')
     .select('*, goals:Goal(*), matchSquads:MatchSquad(*)')
@@ -25,6 +26,7 @@ export async function getTopScorers() {
 
 // 2. Partidos con goles desglosados
 export async function getMatchesWithGoals() {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('Match')
     .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*)')
@@ -35,6 +37,7 @@ export async function getMatchesWithGoals() {
 
 // 3. ¡GOL!
 export async function addGoal(matchId: string, playerId: string) {
+  const supabase = await createClient()
   const { error } = await supabase.from('Goal').insert({ id: uuidv4(), matchId, playerId })
   if (error) throw new Error(error.message)
   revalidatePath('/admin/goals')
@@ -42,6 +45,7 @@ export async function addGoal(matchId: string, playerId: string) {
 
 // 4. VAR (Quitar gol)
 export async function removeGoal(matchId: string, playerId: string) {
+  const supabase = await createClient()
   const { data: goal, error: findErr } = await supabase
     .from('Goal')
     .select('id')

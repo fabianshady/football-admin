@@ -1,11 +1,12 @@
 'use server'
 
 import { v4 as uuidv4 } from 'uuid'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // 1. Obtener la data para la matriz
 export async function getPaymentMatrix() {
+  const supabase = await createClient()
   const { data: events, error: eventsErr } = await supabase
     .from('Event')
     .select('*, payments:Payment(*)')
@@ -23,6 +24,7 @@ export async function getPaymentMatrix() {
 
 // 2. Crear Evento y endeudar a todos los activos
 export async function createEvent(formData: FormData) {
+  const supabase = await createClient()
   const name = formData.get('name') as string
   const cost = parseFloat(formData.get('cost') as string)
   const date = formData.get('date') as string
@@ -58,6 +60,7 @@ export async function createEvent(formData: FormData) {
 
 // 3. Toggle de pago
 export async function togglePayment(paymentId: string, currentStatus: boolean) {
+  const supabase = await createClient()
   const { error } = await supabase
     .from('Payment')
     .update({ paid: !currentStatus })
@@ -68,6 +71,7 @@ export async function togglePayment(paymentId: string, currentStatus: boolean) {
 
 // 4. Borrar evento (pagos en cascada por FK en DB)
 export async function deleteEvent(id: string) {
+  const supabase = await createClient()
   const { error } = await supabase.from('Event').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/payments')

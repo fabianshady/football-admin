@@ -1,11 +1,12 @@
 'use server'
 
 import { v4 as uuidv4 } from 'uuid'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // Traer partidos con convocados y goles
 export async function getMatches() {
+  const supabase = await createClient()
   const { data, error } = await supabase
     .from('Match')
     .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*, player:Player(*))')
@@ -16,6 +17,7 @@ export async function getMatches() {
 
 // Guardar Partido + Convocatoria
 export async function saveMatch(formData: FormData) {
+  const supabase = await createClient()
   const id = formData.get('id') as string
 
   const matchData = {
@@ -67,6 +69,7 @@ export async function saveMatch(formData: FormData) {
 
 // Crear partido (alias para MatchForm)
 export async function createMatch(formData: FormData) {
+  const supabase = await createClient()
   const squadIds = formData.getAll('squad') as string[]
   const matchId = uuidv4()
 
@@ -100,12 +103,14 @@ export async function createMatch(formData: FormData) {
 }
 
 export async function deleteMatch(id: string) {
+  const supabase = await createClient()
   const { error } = await supabase.from('Match').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/matches')
 }
 
 export async function updateMatchScore(matchId: string, scoreHome: number, scoreAway: number) {
+  const supabase = await createClient()
   const { error } = await supabase
     .from('Match')
     .update({ scoreHome, scoreAway })
