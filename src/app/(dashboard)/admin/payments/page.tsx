@@ -1,5 +1,6 @@
 import { getPaymentMatrix, togglePayment, deleteEvent } from '@/app/actions/payments'
 import EventForm from '@/components/EventForm'
+import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
 export default async function PaymentsPage() {
   const { events, players } = await getPaymentMatrix()
@@ -28,7 +29,7 @@ export default async function PaymentsPage() {
     : 0
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
+    <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -38,27 +39,27 @@ export default async function PaymentsPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+      <AnimatedList className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <AnimatedItem className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Jugadores activos</p>
           <p className="text-3xl font-black text-slate-800 dark:text-slate-100">{activePlayers.length}</p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-rose-200 dark:border-rose-900/50 shadow-sm">
+        </AnimatedItem>
+        <AnimatedItem className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-rose-200 dark:border-rose-900/50 shadow-sm">
           <p className="text-xs font-semibold text-rose-400 uppercase tracking-wide mb-2">Por cobrar</p>
           <p className="text-3xl font-black text-rose-600">${totalDebt.toFixed(0)}</p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-emerald-200 dark:border-emerald-900/50 shadow-sm">
+        </AnimatedItem>
+        <AnimatedItem className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-emerald-200 dark:border-emerald-900/50 shadow-sm">
           <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wide mb-2">Cobrado</p>
           <p className="text-3xl font-black text-emerald-600">${totalPaid.toFixed(0)}</p>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-blue-200 dark:border-blue-900/50 shadow-sm">
+        </AnimatedItem>
+        <AnimatedItem className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-blue-200 dark:border-blue-900/50 shadow-sm">
           <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-2">Cobranza</p>
           <p className="text-3xl font-black text-blue-600">{collectionRate}%</p>
           <div className="mt-2 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" style={{ width: `${collectionRate}%` }} />
           </div>
-        </div>
-      </div>
+        </AnimatedItem>
+      </AnimatedList>
 
       {/* Formulario nuevo cobro */}
       <EventForm />
@@ -149,6 +150,6 @@ export default async function PaymentsPage() {
           </div>
         )}
       </div>
-    </div>
+    </AnimatedPage>
   )
 }

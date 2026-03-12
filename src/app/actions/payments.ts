@@ -1,26 +1,28 @@
 'use server'
 
+import { cache } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// 1. Obtener la data para la matriz
-export async function getPaymentMatrix() {
+// 1. Obtener la data para la matriz, cacheamos para deduplicar peticiones en SSR/RSC
+export const getPaymentMatrix = cache(async () => {
   const supabase = await createClient()
-  const { data: events, error: eventsErr } = await supabase
-    .from('Event')
-    .select('*, payments:Payment(*)')
-    .order('date', { ascending: false })
-  if (eventsErr) throw new Error(eventsErr.message)
 
-  const { data: players, error: playersErr } = await supabase
-    .from('Player')
-    .select('*, payments:Payment(*)')
-    .order('name', { ascending: true })
-  if (playersErr) throw new Error(playersErr.message)
+  // Ejecutamos en paralelo para ser más rápidos
+  const [eventsResult, playersResult] = await Promise.all([
+    supabase.from('Event').select('*, payments:Payment(*)').order('date', { ascending: false }),
+    supabase.from('Player').select('*, payments:Payment(*)').order('name', { ascending: true })
+  ])
 
-  return { events: events ?? [], players: players ?? [] }
-}
+  if (eventsResult.error) throw new Error(eventsResult.error.message)
+  if (playersResult.error) throw new Error(playersResult.error.message)
+
+  return { 
+    events: eventsResult.data ?? [], 
+    players: playersResult.data ?? [] 
+  }
+})
 
 // 2. Crear Evento y endeudar a todos los activos
 export async function createEvent(formData: FormData) {

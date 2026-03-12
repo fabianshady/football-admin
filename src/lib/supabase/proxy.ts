@@ -28,12 +28,15 @@ export async function updateSession(request: NextRequest) {
     )
 
     // IMPORTANT: Do not run code between createServerClient and
-    // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+    // supabase.auth.getSession(). A simple mistake could make it very hard to debug
     // issues with users being randomly logged out.
 
+    // Usamos getSession para no hacer una petición de red en el middleware y mejorar la velocidad de carga (TTFB)
     const {
-        data: { user },
-    } = await supabase.auth.getUser()
+        data: { session },
+    } = await supabase.auth.getSession()
+
+    const user = session?.user
 
     if (
         !user &&

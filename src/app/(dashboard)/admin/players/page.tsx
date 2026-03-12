@@ -1,4 +1,5 @@
 import { getPlayers, savePlayer, togglePlayerStatus, deletePlayer } from '@/app/actions/players'
+import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
 const POSITION_GROUPS = ['Portero', 'Defensa', 'Mediocentro', 'Lateral', 'Delantero', 'Cuerpo Técnico']
 
@@ -19,7 +20,7 @@ export default async function PlayersPage() {
   const players = await getPlayers()
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
+    <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -81,9 +82,9 @@ export default async function PlayersPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupPlayers.map((player) => (
-                  <div
+                  <AnimatedItem
                     key={player.id}
                     className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${
                       player.active
@@ -138,9 +139,9 @@ export default async function PlayersPage() {
                         </button>
                       </form>
                     </div>
-                  </div>
+                  </AnimatedItem>
                 ))}
-              </div>
+              </AnimatedList>
             </section>
           )
         })}
@@ -175,6 +176,6 @@ export default async function PlayersPage() {
           </div>
         </div>
       )}
-    </div>
+    </AnimatedPage>
   )
 }

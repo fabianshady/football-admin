@@ -1,6 +1,7 @@
 import { getPlayers } from '@/app/actions/players'
 import { getTopScorers, getMatchesWithGoals } from '@/app/actions/goals'
 import GoalLogger from '@/components/GoalLogger'
+import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
 export default async function GoalsPage() {
   const players = await getPlayers()
@@ -13,7 +14,7 @@ export default async function GoalsPage() {
   const third = topScorers[2] || null
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
+    <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -26,7 +27,7 @@ export default async function GoalsPage() {
 
       {/* Podio */}
       {topScorers.length > 0 && (
-        <div className="max-w-lg mx-auto mb-10">
+        <AnimatedItem className="max-w-lg mx-auto mb-10">
           <div className="flex items-end justify-center gap-2 sm:gap-4">
             {/* Segundo lugar */}
             <div className="flex-1 text-center">
@@ -61,14 +62,14 @@ export default async function GoalsPage() {
               <div className="h-6 bg-orange-200 dark:bg-orange-900 rounded-b-xl" />
             </div>
           </div>
-        </div>
+        </AnimatedItem>
       )}
 
       {/* Leaderboard + Registro */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <AnimatedList className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Clasificación */}
-        <div className="lg:col-span-1">
+        <AnimatedItem className="lg:col-span-1">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden sticky top-4">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/10 dark:to-slate-800">
               <h2 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -109,18 +110,18 @@ export default async function GoalsPage() {
               </div>
             )}
           </div>
-        </div>
+        </AnimatedItem>
 
         {/* Registro por partido */}
-        <div className="lg:col-span-2">
+        <AnimatedItem className="lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Registro por Partido</h2>
             <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
           </div>
           <GoalLogger matches={matches} />
-        </div>
+        </AnimatedItem>
 
-      </div>
-    </div>
+      </AnimatedList>
+    </AnimatedPage>
   )
 }

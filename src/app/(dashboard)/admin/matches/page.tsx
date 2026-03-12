@@ -2,13 +2,14 @@ import { getMatches, deleteMatch } from '@/app/actions/matches'
 import { getActivePlayers } from '@/app/actions/players'
 import MatchForm from '@/components/MatchForm'
 import ScoreEditor from '@/components/ScoreEditor'
+import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
 export default async function MatchesPage() {
   const matches = await getMatches()
   const activePlayers = await getActivePlayers()
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
+    <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -37,14 +38,14 @@ export default async function MatchesPage() {
             <p className="text-sm text-slate-400 mt-1">Usa el formulario de arriba para agregar el primer partido</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AnimatedList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {matches.map((match: any) => {
               const isWin = match.scoreHome > match.scoreAway
               const isLoss = match.scoreHome < match.scoreAway
               const matchDate = new Date(match.date)
 
               return (
-                <div
+                <AnimatedItem
                   key={match.id}
                   className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 ${
                     isWin
@@ -147,13 +148,13 @@ export default async function MatchesPage() {
                         </div>
                       </div>
                     )}
-                  </div>
-                </div>
+                    </div>
+                  </AnimatedItem>
               )
             })}
-          </div>
+          </AnimatedList>
         )}
       </div>
-    </div>
+    </AnimatedPage>
   )
 }
