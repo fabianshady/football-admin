@@ -102,6 +102,39 @@ export async function createMatch(formData: FormData) {
   revalidatePath('/admin/matches')
 }
 
+export async function updateMatch(formData: FormData) {
+  const supabase = await createClient()
+  const id = formData.get('id') as string
+  const squadIds = formData.getAll('squad') as string[]
+
+  const matchData = {
+    myTeam: formData.get('myTeam') as string,
+    rivalTeam: formData.get('rivalTeam') as string,
+    date: formData.get('date') as string,
+    location: formData.get('location') as string,
+    myPos: parseInt(formData.get('myPos') as string) || 1,
+    rivalPos: parseInt(formData.get('rivalPos') as string) || 1,
+  }
+
+  const { error } = await supabase
+    .from('Match')
+    .update(matchData)
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+
+  // Update squad
+  await supabase.from('MatchSquad').delete().eq('matchId', id)
+  
+  if (squadIds.length > 0) {
+    const { error: squadErr } = await supabase
+      .from('MatchSquad')
+      .insert(squadIds.map(playerId => ({ id: uuidv4(), matchId: id, playerId })))
+    if (squadErr) throw new Error(squadErr.message)
+  }
+
+  revalidatePath('/admin/matches')
+}
+
 export async function deleteMatch(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('Match').delete().eq('id', id)

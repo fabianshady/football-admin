@@ -2,6 +2,7 @@ import { getMatches, deleteMatch } from '@/app/actions/matches'
 import { getActivePlayers } from '@/app/actions/players'
 import MatchForm from '@/components/MatchForm'
 import ScoreEditor from '@/components/ScoreEditor'
+import MatchEditModal from '@/components/MatchEditModal'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
 export default async function MatchesPage() {
@@ -85,6 +86,7 @@ export default async function MatchesPage() {
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
+                        <MatchEditModal match={match} players={activePlayers} />
                         <form action={deleteMatch.bind(null, match.id)}>
                           <button className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-slate-400 hover:text-rose-500 flex items-center justify-center text-xs transition-all">
                             ✕
