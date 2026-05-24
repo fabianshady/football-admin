@@ -68,13 +68,25 @@ export default async function MatchesPage() {
                   <div className="p-4 sm:p-5">
                     {/* Header */}
                     <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 capitalize">
-                          {matchDate.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-blue-500 dark:text-blue-400 font-semibold mt-0.5">
-                          🕐 {matchDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                      <div className="flex gap-2.5 items-center">
+                        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 p-1 flex items-center justify-center shadow-sm relative group" title={`Uniforme ${match.kit || 1}`}>
+                          <img
+                            src={match.kit === 2 
+                              ? "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/2u.png"
+                              : "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/1u.png"
+                            }
+                            alt={`Uniforme ${match.kit || 1}`}
+                            className="max-h-full max-w-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform duration-200"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 capitalize block">
+                            {matchDate.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] text-blue-500 dark:text-blue-400 font-bold mt-0.5">
+                            🕐 {matchDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

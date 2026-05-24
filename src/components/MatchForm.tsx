@@ -13,6 +13,7 @@ type Player = {
 
 export default function MatchForm({ players }: { players: Player[] }) {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
+  const [selectedKit, setSelectedKit] = useState<number>(1)
   const [isOpen, setIsOpen] = useState(false)
 
   const togglePlayer = (playerId: string) => {
@@ -30,10 +31,12 @@ export default function MatchForm({ players }: { players: Player[] }) {
     // Detectar timezone del usuario y convertir a UTC
     const utcDateTime = convertLocalToUTC(dateValue, timeValue)
     formData.set('date', utcDateTime)
+    formData.set('kit', selectedKit.toString())
 
     selectedPlayers.forEach(id => formData.append('squad', id))
     await createMatch(formData)
     setSelectedPlayers([])
+    setSelectedKit(1)
     setIsOpen(false)
   }
 
@@ -115,6 +118,64 @@ export default function MatchForm({ players }: { players: Player[] }) {
               <input name="scoreAway" type="number" min="0" defaultValue="0"
                 className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
             </div>
+          </div>
+        </div>
+
+        {/* Uniforme */}
+        <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
+          <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-3">
+            Uniforme a utilizar 👕
+          </label>
+          <div className="flex gap-4 max-w-md">
+            {/* Kit 1 */}
+            <button
+              type="button"
+              onClick={() => setSelectedKit(1)}
+              className={`flex-1 flex flex-col items-center p-3 rounded-2xl border-2 transition-all relative overflow-hidden group ${
+                selectedKit === 1
+                  ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-900/10'
+                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+              }`}
+            >
+              <div className="w-20 h-20 mb-2 relative flex items-center justify-center">
+                <img
+                  src="https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/1u.png"
+                  alt="Uniforme 1"
+                  className="max-h-full max-w-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-200"
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Uniforme 1</span>
+              {selectedKit === 1 && (
+                <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
+                  ✓
+                </div>
+              )}
+            </button>
+
+            {/* Kit 2 */}
+            <button
+              type="button"
+              onClick={() => setSelectedKit(2)}
+              className={`flex-1 flex flex-col items-center p-3 rounded-2xl border-2 transition-all relative overflow-hidden group ${
+                selectedKit === 2
+                  ? 'border-blue-500 bg-blue-50/30 dark:bg-blue-900/10'
+                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
+              }`}
+            >
+              <div className="w-20 h-20 mb-2 relative flex items-center justify-center">
+                <img
+                  src="https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/2u.png"
+                  alt="Uniforme 2"
+                  className="max-h-full max-w-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-200"
+                />
+              </div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Uniforme 2</span>
+              {selectedKit === 2 && (
+                <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
+                  ✓
+                </div>
+              )}
+            </button>
           </div>
         </div>
 

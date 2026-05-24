@@ -29,6 +29,7 @@ export async function saveMatch(formData: FormData) {
     location: formData.get('location') as string,
     scoreHome: parseInt(formData.get('scoreHome') as string) || 0,
     scoreAway: parseInt(formData.get('scoreAway') as string) || 0,
+    kit: parseInt(formData.get('kit') as string) || 1,
   }
 
   const selectedPlayerIds = formData.getAll('players') as string[]
@@ -83,6 +84,7 @@ export async function createMatch(formData: FormData) {
     rivalPos: parseInt(formData.get('rivalPos') as string) || 1,
     scoreHome: parseInt(formData.get('scoreHome') as string) || 0,
     scoreAway: parseInt(formData.get('scoreAway') as string) || 0,
+    kit: parseInt(formData.get('kit') as string) || 1,
   }
 
   const { data: match, error } = await supabase
@@ -114,6 +116,7 @@ export async function updateMatch(formData: FormData) {
     location: formData.get('location') as string,
     myPos: parseInt(formData.get('myPos') as string) || 1,
     rivalPos: parseInt(formData.get('rivalPos') as string) || 1,
+    kit: parseInt(formData.get('kit') as string) || 1,
   }
 
   const { error } = await supabase
