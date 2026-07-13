@@ -1,13 +1,21 @@
-import { getPlayers } from '@/app/actions/players'
+import { Suspense } from 'react'
 import { getTopScorers, getMatchesWithGoals } from '@/app/actions/goals'
+import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
 import GoalLogger from '@/components/GoalLogger'
+import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
-export default async function GoalsPage() {
-  const players = await getPlayers()
-  const activePlayers = players.filter((p: any) => p.active)
-  const topScorers = await getTopScorers()
-  const matches = await getMatchesWithGoals()
+type Props = {
+  searchParams: Promise<{ season?: string }>
+}
+
+export default async function GoalsPage({ searchParams }: Props) {
+  const params = await searchParams
+  const seasons = await getSeasons()
+  const seasonId = await resolveSeasonId(params.season)
+  const topScorers = await getTopScorers(seasonId)
+  const matches = await getMatchesWithGoals(seasonId)
+  const currentSeason = seasons.find(s => s.id === seasonId)
 
   const first = topScorers[0] || null
   const second = topScorers[1] || null
@@ -15,21 +23,28 @@ export default async function GoalsPage() {
 
   return (
     <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-          Tabla de Goleo 🥅
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-          {topScorers.reduce((a: number, s: any) => a + s.goals, 0)} goles en {matches.length} partido{matches.length !== 1 ? 's' : ''}
-        </p>
+      {/* Header + filter */}
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Tabla de Goleo 🥅
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            {topScorers.reduce((a: number, s: any) => a + s.goals, 0)} goles en {matches.length} partido{matches.length !== 1 ? 's' : ''}
+            {currentSeason ? ` · ${currentSeason.name}` : ''}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm">
+          <Suspense fallback={<div className="text-xs text-slate-400">Cargando…</div>}>
+            <SeasonFilter seasons={seasons} selectedId={seasonId} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Podio */}
       {topScorers.length > 0 && (
         <AnimatedItem className="max-w-lg mx-auto mb-10">
           <div className="flex items-end justify-center gap-2 sm:gap-4">
-            {/* Segundo lugar */}
             <div className="flex-1 text-center">
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-b-none pt-4 pb-3 px-3 shadow-sm">
                 <div className="text-2xl sm:text-3xl mb-2">🥈</div>
@@ -40,7 +55,6 @@ export default async function GoalsPage() {
               <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-b-xl" />
             </div>
 
-            {/* Primer lugar */}
             <div className="flex-1 text-center">
               <div className="bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-yellow-900/30 dark:to-amber-900/20 border-2 border-amber-400 dark:border-amber-600 rounded-2xl rounded-b-none pt-5 pb-3 px-3 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20">
                 <div className="text-3xl sm:text-4xl mb-2">🥇</div>
@@ -51,7 +65,6 @@ export default async function GoalsPage() {
               <div className="h-12 bg-gradient-to-b from-amber-300 to-amber-400 dark:from-amber-700 dark:to-amber-800 rounded-b-xl" />
             </div>
 
-            {/* Tercer lugar */}
             <div className="flex-1 text-center">
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-b-none pt-4 pb-3 px-3 shadow-sm">
                 <div className="text-2xl sm:text-3xl mb-2">🥉</div>
@@ -65,10 +78,7 @@ export default async function GoalsPage() {
         </AnimatedItem>
       )}
 
-      {/* Leaderboard + Registro */}
       <AnimatedList className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Clasificación */}
         <AnimatedItem className="lg:col-span-1">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden sticky top-4">
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/10 dark:to-slate-800">
@@ -79,7 +89,7 @@ export default async function GoalsPage() {
             {topScorers.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-3xl mb-2">⚽</p>
-                <p className="text-slate-400 text-sm">Aún no cae el primero.</p>
+                <p className="text-slate-400 text-sm">Aún no cae el primero en esta temporada.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -112,7 +122,6 @@ export default async function GoalsPage() {
           </div>
         </AnimatedItem>
 
-        {/* Registro por partido */}
         <AnimatedItem className="lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Registro por Partido</h2>
@@ -120,7 +129,6 @@ export default async function GoalsPage() {
           </div>
           <GoalLogger matches={matches} />
         </AnimatedItem>
-
       </AnimatedList>
     </AnimatedPage>
   )

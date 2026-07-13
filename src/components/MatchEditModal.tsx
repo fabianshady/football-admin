@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { updateMatch } from '@/app/actions/matches'
 import { convertLocalToUTC } from '@/lib/dateUtils'
+import type { Season } from '@/app/actions/seasons'
 
 type Player = {
   id: string
@@ -11,18 +12,24 @@ type Player = {
   positions: string[]
 }
 
-export default function MatchEditModal({ match, players }: { match: any, players: Player[] }) {
-  const [isOpen, setIsOpen] = useState(false)
-  
-  // Extraemos la fecha y hora iniciales del match (que viene en string ISO de UTC)
-  const initialDateObj = new Date(match.date)
-  const initialDateStr = initialDateObj.toLocaleDateString('en-CA') // YYYY-MM-DD local format
-  const initialTimeStr = initialDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) // HH:MM local format
+type Props = {
+  match: any
+  players: Player[]
+  seasons: Season[]
+}
 
-  // match.squad is an array of objects `MatchSquad`, which has `playerId`
+export default function MatchEditModal({ match, players, seasons }: Props) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const initialDateObj = new Date(match.date)
+  const initialDateStr = initialDateObj.toLocaleDateString('en-CA')
+  const initialTimeStr = initialDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+
   const initialSelectedPlayers = match.squad?.map((s: any) => s.playerId || s.player?.id) || []
   const initialKit = match.kit || 1
-  
+
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelectedPlayers)
   const [selectedKit, setSelectedKit] = useState<number>(initialKit)
 
@@ -35,18 +42,25 @@ export default function MatchEditModal({ match, players }: { match: any, players
   }
 
   const handleSubmit = async (formData: FormData) => {
+    setError(null)
     const dateValue = formData.get('date') as string
     const timeValue = formData.get('time') as string || '20:00'
 
-    // Detect timezone and convert to UTC
     const utcDateTime = convertLocalToUTC(dateValue, timeValue)
     formData.set('date', utcDateTime)
     formData.set('id', match.id)
     formData.set('kit', selectedKit.toString())
 
     selectedPlayers.forEach(id => formData.append('squad', id))
-    await updateMatch(formData)
-    setIsOpen(false)
+
+    startTransition(async () => {
+      try {
+        await updateMatch(formData)
+        setIsOpen(false)
+      } catch (e: any) {
+        setError(e?.message || 'Error al actualizar')
+      }
+    })
   }
 
   if (!isOpen) {
@@ -79,43 +93,57 @@ export default function MatchEditModal({ match, players }: { match: any, players
         </div>
 
         <form action={handleSubmit} className="p-5 space-y-5">
-          {/* Datos básicos */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Mi Equipo</label>
-              <input name="myTeam" type="text" defaultValue={match.myTeam} required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="myTeam" type="text" defaultValue={match.myTeam} required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Rival</label>
-              <input name="rivalTeam" type="text" defaultValue={match.rivalTeam} required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="rivalTeam" type="text" defaultValue={match.rivalTeam} required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Fecha</label>
-              <input name="date" type="date" defaultValue={initialDateStr} required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="date" type="date" defaultValue={initialDateStr} required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Hora</label>
-              <input name="time" type="time" defaultValue={initialTimeStr} required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="time" type="time" defaultValue={initialTimeStr} required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Ubicación</label>
-              <input name="location" type="text" defaultValue={match.location} required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="location" type="text" defaultValue={match.location} required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Temporada</label>
+              <select
+                name="seasonid"
+                defaultValue={match.seasonid || seasons.find(s => s.active)?.id || ''}
+                disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+              >
+                {seasons.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.active ? ' ●' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Mi Pos.</label>
-                <input name="myPos" type="number" min="1" defaultValue={match.myPos} required
-                  className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+                <input name="myPos" type="number" min="1" defaultValue={match.myPos} required disabled={isPending}
+                  className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Pos. Rival</label>
-                <input name="rivalPos" type="number" min="1" defaultValue={match.rivalPos} required
-                  className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+                <input name="rivalPos" type="number" min="1" defaultValue={match.rivalPos} required disabled={isPending}
+                  className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
               </div>
             </div>
           </div>
@@ -126,7 +154,6 @@ export default function MatchEditModal({ match, players }: { match: any, players
               Uniforme a utilizar 👕
             </label>
             <div className="flex gap-4 max-w-md">
-              {/* Kit 1 */}
               <button
                 type="button"
                 onClick={() => setSelectedKit(1)}
@@ -151,7 +178,6 @@ export default function MatchEditModal({ match, players }: { match: any, players
                 )}
               </button>
 
-              {/* Kit 2 */}
               <button
                 type="button"
                 onClick={() => setSelectedKit(2)}
@@ -209,22 +235,24 @@ export default function MatchEditModal({ match, players }: { match: any, players
                 </button>
               ))}
             </div>
-            {players.length === 0 && (
-              <p className="text-slate-400 dark:text-slate-500 text-sm">No hay jugadores activos para convocar</p>
-            )}
           </div>
 
-          {/* Submit */}
+          {error && (
+            <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">{error}</p>
+          )}
+
           <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex gap-3">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md"
+              disabled={isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-50"
             >
-              Guardar Cambios
+              {isPending ? 'Guardando…' : 'Guardar Cambios'}
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
+              disabled={isPending}
               className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
             >
               Cancelar

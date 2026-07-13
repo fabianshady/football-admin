@@ -26,11 +26,24 @@ model Player {
   createdAt DateTime @default(now())
 }
 
+model season {
+  id        String   @id
+  name      String   @unique
+  startdate DateTime @db.Date
+  enddate   DateTime @db.Date
+  active    Boolean  @default(false)
+
+  events    Event[]
+  matches   Match[]
+}
+
 model Event {
   id        String   @id @default(uuid())
   name      String   // Ej: "Entrenamiento Enero", "Arbitraje Final"
   cost      Float    // Lo que paga CADA jugador
   date      DateTime
+  seasonid  String?
+  season    season?  @relation(fields: [seasonid], references: [id])
   
   // Relaciones
   payments  Payment[]
@@ -60,6 +73,8 @@ model Match {
   scoreHome   Int      @default(0)
   scoreAway   Int      @default(0)
   kit         Int      @default(1)
+  seasonid    String?
+  season      season?  @relation(fields: [seasonid], references: [id])
   
   // Relaciones
   squad       MatchSquad[] // Los convocados

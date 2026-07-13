@@ -2,6 +2,9 @@ import Link from "next/link";
 import MobileMenuButton from "@/components/MobileMenuButton";
 import LogoutButton from "@/components/LogoutButton";
 
+const navLink =
+  "flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white";
+
 export default function DashboardLayout({
     children,
 }: {
@@ -29,29 +32,33 @@ export default function DashboardLayout({
 
                     {/* Navigation */}
                     <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-                        <Link href="/" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white">
+                        <Link href="/" className={navLink}>
                             <span className="text-base">🏠</span>
                             <span className="font-medium text-sm">Dashboard</span>
                         </Link>
 
                         <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-5 mb-2 px-4">Gestión</div>
 
-                        <Link href="/admin/players" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white">
+                        <Link href="/admin/players" className={navLink}>
                             <span className="text-base">🏃</span>
                             <span className="font-medium text-sm">Jugadores</span>
                         </Link>
-                        <Link href="/admin/payments" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white">
+                        <Link href="/admin/payments" className={navLink}>
                             <span className="text-base">💸</span>
                             <span className="font-medium text-sm">Pagos y Deudas</span>
+                        </Link>
+                        <Link href="/admin/seasons" className={navLink}>
+                            <span className="text-base">📅</span>
+                            <span className="font-medium text-sm">Temporadas</span>
                         </Link>
 
                         <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-5 mb-2 px-4">Cancha</div>
 
-                        <Link href="/admin/matches" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white">
+                        <Link href="/admin/matches" className={navLink}>
                             <span className="text-base">🏟️</span>
                             <span className="font-medium text-sm">Partidos</span>
                         </Link>
-                        <Link href="/admin/goals" className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 transition-all text-slate-400 hover:text-white">
+                        <Link href="/admin/goals" className={navLink}>
                             <span className="text-base">🥅</span>
                             <span className="font-medium text-sm">Goleo</span>
                         </Link>

@@ -6,22 +6,38 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // 1. Obtener la data para la matriz, cacheamos para deduplicar peticiones en SSR/RSC
-export const getPaymentMatrix = cache(async () => {
+export const getPaymentMatrix = cache(async (seasonId?: string | null) => {
   const supabase = await createClient()
 
-  // Ejecutamos en paralelo para ser más rápidos
+  let eventsQuery = supabase
+    .from('Event')
+    .select('*, payments:Payment(*), season:season(*)')
+    .order('date', { ascending: false })
+
+  if (seasonId) {
+    eventsQuery = eventsQuery.eq('seasonid', seasonId)
+  }
+
   const [eventsResult, playersResult] = await Promise.all([
-    supabase.from('Event').select('*, payments:Payment(*)').order('date', { ascending: false }),
-    supabase.from('Player').select('*, payments:Payment(*)').order('name', { ascending: true })
+    eventsQuery,
+    supabase.from('Player').select('*, payments:Payment(*)').order('name', { ascending: true }),
   ])
 
   if (eventsResult.error) throw new Error(eventsResult.error.message)
   if (playersResult.error) throw new Error(playersResult.error.message)
 
-  return { 
-    events: eventsResult.data ?? [], 
-    players: playersResult.data ?? [] 
-  }
+  const events = eventsResult.data ?? []
+  const eventIds = new Set(events.map((e: any) => e.id))
+
+  // Filter player payments to only those in the selected season's events
+  const players = (playersResult.data ?? []).map((player: any) => ({
+    ...player,
+    payments: seasonId
+      ? (player.payments ?? []).filter((p: any) => eventIds.has(p.eventId))
+      : player.payments ?? [],
+  }))
+
+  return { events, players }
 })
 
 // 2. Crear Evento y endeudar a todos los activos
@@ -30,11 +46,14 @@ export async function createEvent(formData: FormData) {
   const name = formData.get('name') as string
   const cost = parseFloat(formData.get('cost') as string)
   const date = formData.get('date') as string
+  const seasonid = (formData.get('seasonid') as string) || null
   const id = uuidv4()
+
+  if (!seasonid) throw new Error('Debes seleccionar una temporada')
 
   const { data: newEvent, error: eventErr } = await supabase
     .from('Event')
-    .insert({ id, name, cost, date })
+    .insert({ id, name, cost, date, seasonid })
     .select()
     .single()
   if (eventErr) throw new Error(eventErr.message)

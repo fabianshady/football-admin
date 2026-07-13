@@ -5,12 +5,18 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // Traer partidos con convocados y goles
-export async function getMatches() {
+export async function getMatches(seasonId?: string | null) {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('Match')
-    .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*, player:Player(*))')
+    .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*, player:Player(*)), season:season(*)')
     .order('date', { ascending: false })
+
+  if (seasonId) {
+    query = query.eq('seasonid', seasonId)
+  }
+
+  const { data, error } = await query
   if (error) throw new Error(error.message)
   return data ?? []
 }
@@ -30,6 +36,7 @@ export async function saveMatch(formData: FormData) {
     scoreHome: parseInt(formData.get('scoreHome') as string) || 0,
     scoreAway: parseInt(formData.get('scoreAway') as string) || 0,
     kit: parseInt(formData.get('kit') as string) || 1,
+    seasonid: (formData.get('seasonid') as string) || null,
   }
 
   const selectedPlayerIds = formData.getAll('players') as string[]
@@ -73,6 +80,9 @@ export async function createMatch(formData: FormData) {
   const supabase = await createClient()
   const squadIds = formData.getAll('squad') as string[]
   const matchId = uuidv4()
+  const seasonid = (formData.get('seasonid') as string) || null
+
+  if (!seasonid) throw new Error('Debes seleccionar una temporada')
 
   const matchData = {
     id: matchId,
@@ -85,6 +95,7 @@ export async function createMatch(formData: FormData) {
     scoreHome: parseInt(formData.get('scoreHome') as string) || 0,
     scoreAway: parseInt(formData.get('scoreAway') as string) || 0,
     kit: parseInt(formData.get('kit') as string) || 1,
+    seasonid,
   }
 
   const { data: match, error } = await supabase
@@ -102,12 +113,14 @@ export async function createMatch(formData: FormData) {
   }
 
   revalidatePath('/admin/matches')
+  revalidatePath('/admin/goals')
 }
 
 export async function updateMatch(formData: FormData) {
   const supabase = await createClient()
   const id = formData.get('id') as string
   const squadIds = formData.getAll('squad') as string[]
+  const seasonid = (formData.get('seasonid') as string) || null
 
   const matchData = {
     myTeam: formData.get('myTeam') as string,
@@ -117,6 +130,7 @@ export async function updateMatch(formData: FormData) {
     myPos: parseInt(formData.get('myPos') as string) || 1,
     rivalPos: parseInt(formData.get('rivalPos') as string) || 1,
     kit: parseInt(formData.get('kit') as string) || 1,
+    seasonid,
   }
 
   const { error } = await supabase
@@ -127,7 +141,7 @@ export async function updateMatch(formData: FormData) {
 
   // Update squad
   await supabase.from('MatchSquad').delete().eq('matchId', id)
-  
+
   if (squadIds.length > 0) {
     const { error: squadErr } = await supabase
       .from('MatchSquad')
@@ -136,6 +150,7 @@ export async function updateMatch(formData: FormData) {
   }
 
   revalidatePath('/admin/matches')
+  revalidatePath('/admin/goals')
 }
 
 export async function deleteMatch(id: string) {
@@ -143,6 +158,7 @@ export async function deleteMatch(id: string) {
   const { error } = await supabase.from('Match').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/matches')
+  revalidatePath('/admin/goals')
 }
 
 export async function updateMatchScore(matchId: string, scoreHome: number, scoreAway: number) {

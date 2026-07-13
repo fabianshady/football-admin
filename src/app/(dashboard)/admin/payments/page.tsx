@@ -1,9 +1,19 @@
+import { Suspense } from 'react'
 import { getPaymentMatrix, togglePayment, deleteEvent } from '@/app/actions/payments'
+import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
 import EventForm from '@/components/EventForm'
+import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
-export default async function PaymentsPage() {
-  const { events, players } = await getPaymentMatrix()
+type Props = {
+  searchParams: Promise<{ season?: string }>
+}
+
+export default async function PaymentsPage({ searchParams }: Props) {
+  const params = await searchParams
+  const seasons = await getSeasons()
+  const seasonId = await resolveSeasonId(params.season)
+  const { events, players } = await getPaymentMatrix(seasonId)
   const activePlayers = players.filter((p: any) => p.active)
 
   const totalDebt = activePlayers.reduce((acc: number, player: any) => {
@@ -28,14 +38,26 @@ export default async function PaymentsPage() {
     ? Math.round((totalPaid / (totalDebt + totalPaid)) * 100)
     : 0
 
+  const currentSeason = seasons.find(s => s.id === seasonId)
+
   return (
     <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-          Pagos y Deudas 💸
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Control de cuotas y cobros del equipo</p>
+      {/* Header + filter */}
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Pagos y Deudas 💸
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            Control de cuotas y cobros
+            {currentSeason ? ` · ${currentSeason.name}` : ''}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm">
+          <Suspense fallback={<div className="text-xs text-slate-400">Cargando…</div>}>
+            <SeasonFilter seasons={seasons} selectedId={seasonId} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -62,13 +84,16 @@ export default async function PaymentsPage() {
       </AnimatedList>
 
       {/* Formulario nuevo cobro */}
-      <EventForm />
+      <EventForm seasons={seasons} defaultSeasonId={seasonId} />
 
       {/* Matriz de pagos */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
           <h2 className="font-bold text-slate-800 dark:text-slate-100">Estado de Pagos</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{events.length} evento{events.length !== 1 ? 's' : ''} &bull; {activePlayers.length} jugador{activePlayers.length !== 1 ? 'es' : ''}</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {events.length} evento{events.length !== 1 ? 's' : ''} &bull; {activePlayers.length} jugador{activePlayers.length !== 1 ? 'es' : ''}
+            {currentSeason ? ` · Temp. ${currentSeason.name}` : ''}
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[400px] text-sm text-left">
@@ -143,7 +168,14 @@ export default async function PaymentsPage() {
             </tbody>
           </table>
         </div>
-        {activePlayers.length === 0 && (
+        {events.length === 0 && (
+          <div className="py-16 text-center text-slate-400 dark:text-slate-500">
+            <p className="text-4xl mb-3">💸</p>
+            <p className="font-medium">No hay cobros en esta temporada</p>
+            <p className="text-sm mt-1">Crea un nuevo cobro o cambia el filtro de temporada</p>
+          </div>
+        )}
+        {events.length > 0 && activePlayers.length === 0 && (
           <div className="py-16 text-center text-slate-400 dark:text-slate-500">
             <p className="text-4xl mb-3">💸</p>
             <p className="font-medium">No hay jugadores activos registrados</p>

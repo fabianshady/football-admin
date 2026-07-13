@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { createMatch } from '@/app/actions/matches'
 import { convertLocalToUTC } from '@/lib/dateUtils'
+import type { Season } from '@/app/actions/seasons'
 
 type Player = {
   id: string
@@ -11,10 +12,20 @@ type Player = {
   positions: string[]
 }
 
-export default function MatchForm({ players }: { players: Player[] }) {
+type Props = {
+  players: Player[]
+  seasons: Season[]
+  defaultSeasonId?: string | null
+}
+
+export default function MatchForm({ players, seasons, defaultSeasonId }: Props) {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [selectedKit, setSelectedKit] = useState<number>(1)
   const [isOpen, setIsOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const defaultSeason = defaultSeasonId || seasons.find(s => s.active)?.id || seasons[0]?.id || ''
 
   const togglePlayer = (playerId: string) => {
     setSelectedPlayers(prev =>
@@ -25,19 +36,26 @@ export default function MatchForm({ players }: { players: Player[] }) {
   }
 
   const handleSubmit = async (formData: FormData) => {
+    setError(null)
     const dateValue = formData.get('date') as string
     const timeValue = formData.get('time') as string || '20:00'
 
-    // Detectar timezone del usuario y convertir a UTC
     const utcDateTime = convertLocalToUTC(dateValue, timeValue)
     formData.set('date', utcDateTime)
     formData.set('kit', selectedKit.toString())
 
     selectedPlayers.forEach(id => formData.append('squad', id))
-    await createMatch(formData)
-    setSelectedPlayers([])
-    setSelectedKit(1)
-    setIsOpen(false)
+
+    startTransition(async () => {
+      try {
+        await createMatch(formData)
+        setSelectedPlayers([])
+        setSelectedKit(1)
+        setIsOpen(false)
+      } catch (e: any) {
+        setError(e?.message || 'Error al guardar el partido')
+      }
+    })
   }
 
   if (!isOpen) {
@@ -72,51 +90,68 @@ export default function MatchForm({ players }: { players: Player[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Mi Equipo</label>
-            <input name="myTeam" type="text" placeholder="Ej: Filial Sub-20" required
-              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+            <input name="myTeam" type="text" placeholder="Ej: Filial Sub-20" required disabled={isPending}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Rival</label>
-            <input name="rivalTeam" type="text" placeholder="Ej: Real Madrid" required
-              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+            <input name="rivalTeam" type="text" placeholder="Ej: Real Madrid" required disabled={isPending}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Fecha</label>
-            <input name="date" type="date" required
-              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+            <input name="date" type="date" required disabled={isPending}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
           </div>
           <div>
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Hora</label>
-            <input name="time" type="time" defaultValue="20:00" required
-              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+            <input name="time" type="time" defaultValue="20:00" required disabled={isPending}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Ubicación</label>
-            <input name="location" type="text" placeholder="Ej: Estadio Azteca" required
-              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+            <input name="location" type="text" placeholder="Ej: Estadio Azteca" required disabled={isPending}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Temporada</label>
+            <select
+              name="seasonid"
+              required
+              defaultValue={defaultSeason}
+              disabled={isPending || seasons.length === 0}
+              className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+            >
+              {seasons.length === 0 && <option value="">Sin temporadas</option>}
+              {seasons.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.active ? ' ●' : ''}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Mi Pos.</label>
-              <input name="myPos" type="number" min="1" placeholder="1" required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="myPos" type="number" min="1" placeholder="1" required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Pos. Rival</label>
-              <input name="rivalPos" type="number" min="1" placeholder="1" required
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="rivalPos" type="number" min="1" placeholder="1" required disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Local</label>
-              <input name="scoreHome" type="number" min="0" defaultValue="0"
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="scoreHome" type="number" min="0" defaultValue="0" disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Visitante</label>
-              <input name="scoreAway" type="number" min="0" defaultValue="0"
-                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition" />
+              <input name="scoreAway" type="number" min="0" defaultValue="0" disabled={isPending}
+                className="border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-xl w-full text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50" />
             </div>
           </div>
         </div>
@@ -127,7 +162,6 @@ export default function MatchForm({ players }: { players: Player[] }) {
             Uniforme a utilizar 👕
           </label>
           <div className="flex gap-4 max-w-md">
-            {/* Kit 1 */}
             <button
               type="button"
               onClick={() => setSelectedKit(1)}
@@ -152,7 +186,6 @@ export default function MatchForm({ players }: { players: Player[] }) {
               )}
             </button>
 
-            {/* Kit 2 */}
             <button
               type="button"
               onClick={() => setSelectedKit(2)}
@@ -215,17 +248,23 @@ export default function MatchForm({ players }: { players: Player[] }) {
           )}
         </div>
 
+        {error && (
+          <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">{error}</p>
+        )}
+
         {/* Submit */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex gap-3">
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md"
+            disabled={isPending || seasons.length === 0}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md disabled:opacity-50"
           >
-            Guardar Partido
+            {isPending ? 'Guardando…' : 'Guardar Partido'}
           </button>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
+            disabled={isPending}
             className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
           >
             Cancelar

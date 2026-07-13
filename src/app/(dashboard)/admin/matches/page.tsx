@@ -1,26 +1,47 @@
+import { Suspense } from 'react'
 import { getMatches, deleteMatch } from '@/app/actions/matches'
 import { getActivePlayers } from '@/app/actions/players'
+import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
 import MatchForm from '@/components/MatchForm'
 import ScoreEditor from '@/components/ScoreEditor'
 import MatchEditModal from '@/components/MatchEditModal'
+import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 
-export default async function MatchesPage() {
-  const matches = await getMatches()
+type Props = {
+  searchParams: Promise<{ season?: string }>
+}
+
+export default async function MatchesPage({ searchParams }: Props) {
+  const params = await searchParams
+  const seasons = await getSeasons()
+  const seasonId = await resolveSeasonId(params.season)
+  const matches = await getMatches(seasonId)
   const activePlayers = await getActivePlayers()
+  const currentSeason = seasons.find(s => s.id === seasonId)
 
   return (
     <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-          Partidos 🏟️
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Historial y resultados del equipo</p>
+      {/* Header + filter */}
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Partidos 🏟️
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            Historial y resultados
+            {currentSeason ? ` · ${currentSeason.name}` : ''}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm">
+          <Suspense fallback={<div className="text-xs text-slate-400">Cargando…</div>}>
+            <SeasonFilter seasons={seasons} selectedId={seasonId} />
+          </Suspense>
+        </div>
       </div>
 
       {/* Formulario nuevo partido */}
-      <MatchForm players={activePlayers} />
+      <MatchForm players={activePlayers} seasons={seasons} defaultSeasonId={seasonId} />
 
       {/* Lista de partidos */}
       <div className="space-y-4">
@@ -35,8 +56,8 @@ export default async function MatchesPage() {
         {matches.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
             <p className="text-5xl mb-3">🏟️</p>
-            <p className="font-semibold text-slate-600 dark:text-slate-300">No hay partidos registrados</p>
-            <p className="text-sm text-slate-400 mt-1">Usa el formulario de arriba para agregar el primer partido</p>
+            <p className="font-semibold text-slate-600 dark:text-slate-300">No hay partidos en esta temporada</p>
+            <p className="text-sm text-slate-400 mt-1">Registra un partido o cambia el filtro de temporada</p>
           </div>
         ) : (
           <AnimatedList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -56,7 +77,6 @@ export default async function MatchesPage() {
                       : 'border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {/* Result accent bar */}
                   <div className={`h-1 w-full ${
                     isWin
                       ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
@@ -66,12 +86,11 @@ export default async function MatchesPage() {
                   }`} />
 
                   <div className="p-4 sm:p-5">
-                    {/* Header */}
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex gap-2.5 items-center">
                         <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 p-1 flex items-center justify-center shadow-sm relative group" title={`Uniforme ${match.kit || 1}`}>
                           <img
-                            src={match.kit === 2 
+                            src={match.kit === 2
                               ? "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/2u.png"
                               : "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/1u.png"
                             }
@@ -86,6 +105,11 @@ export default async function MatchesPage() {
                           <span className="flex items-center gap-1 text-[10px] text-blue-500 dark:text-blue-400 font-bold mt-0.5">
                             🕐 {matchDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                          {match.season?.name && (
+                            <span className="text-[10px] text-violet-500 dark:text-violet-400 font-semibold mt-0.5 block">
+                              📅 {match.season.name}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -98,7 +122,7 @@ export default async function MatchesPage() {
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
-                        <MatchEditModal match={match} players={activePlayers} />
+                        <MatchEditModal match={match} players={activePlayers} seasons={seasons} />
                         <form action={deleteMatch.bind(null, match.id)}>
                           <button className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-slate-400 hover:text-rose-500 flex items-center justify-center text-xs transition-all">
                             ✕
@@ -107,7 +131,6 @@ export default async function MatchesPage() {
                       </div>
                     </div>
 
-                    {/* Marcador */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex-1 text-right pr-3">
                         <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{match.myTeam}</p>
@@ -126,12 +149,10 @@ export default async function MatchesPage() {
                       </div>
                     </div>
 
-                    {/* Ubicación */}
                     <p className="text-xs text-slate-400 dark:text-slate-500 text-center font-medium">
                       📍 {match.location}
                     </p>
 
-                    {/* Convocados */}
                     {match.squad && match.squad.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">
@@ -147,7 +168,6 @@ export default async function MatchesPage() {
                       </div>
                     )}
 
-                    {/* Goles */}
                     {match.goals && match.goals.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">
@@ -162,8 +182,8 @@ export default async function MatchesPage() {
                         </div>
                       </div>
                     )}
-                    </div>
-                  </AnimatedItem>
+                  </div>
+                </AnimatedItem>
               )
             })}
           </AnimatedList>
