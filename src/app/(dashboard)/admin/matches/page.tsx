@@ -7,6 +7,7 @@ import ScoreEditor from '@/components/ScoreEditor'
 import MatchEditModal from '@/components/MatchEditModal'
 import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
+import { formatVenueDateTime } from '@/lib/dateUtils'
 
 type Props = {
   searchParams: Promise<{ season?: string }>
@@ -21,120 +22,107 @@ export default async function MatchesPage({ searchParams }: Props) {
   const currentSeason = seasons.find(s => s.id === seasonId)
 
   return (
-    <AnimatedPage className="p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
-      {/* Header + filter */}
-      <div className="mb-8 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <AnimatedPage>
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Partidos 🏟️
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          <h1 className="page-title">Partidos</h1>
+          <p className="page-subtitle">
             Historial y resultados
             {currentSeason ? ` · ${currentSeason.name}` : ''}
           </p>
         </div>
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 shadow-sm">
-          <Suspense fallback={<div className="text-xs text-slate-400">Cargando…</div>}>
+        <div className="glass-card rounded-xl px-4 py-3">
+          <Suspense fallback={<div className="text-xs text-muted-foreground">Cargando…</div>}>
             <SeasonFilter seasons={seasons} selectedId={seasonId} />
           </Suspense>
         </div>
       </div>
 
-      {/* Formulario nuevo partido */}
       <MatchForm players={activePlayers} seasons={seasons} defaultSeasonId={seasonId} />
 
-      {/* Lista de partidos */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">Historial</h3>
-          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-          <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+          <h3 className="font-display text-base font-bold tracking-wide text-foreground">Historial</h3>
+          <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
             {matches.length} partido{matches.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {matches.length === 0 ? (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
-            <p className="text-5xl mb-3">🏟️</p>
-            <p className="font-semibold text-slate-600 dark:text-slate-300">No hay partidos en esta temporada</p>
-            <p className="text-sm text-slate-400 mt-1">Registra un partido o cambia el filtro de temporada</p>
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <p className="mb-3 text-5xl">🏟️</p>
+            <p className="font-semibold text-foreground">No hay partidos en esta temporada</p>
+            <p className="mt-1 text-sm text-muted-foreground">Registra un partido o cambia el filtro de temporada</p>
           </div>
         ) : (
-          <AnimatedList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AnimatedList className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {matches.map((match: any) => {
               const isWin = match.scoreHome > match.scoreAway
               const isLoss = match.scoreHome < match.scoreAway
-              const matchDate = new Date(match.date)
+              const venue = formatVenueDateTime(match.date)
 
               return (
                 <AnimatedItem
                   key={match.id}
-                  className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 ${
+                  className={`glass-card hover-lift overflow-hidden rounded-2xl border-l-4 ${
                     isWin
-                      ? 'border-emerald-200 dark:border-emerald-800/50'
+                      ? 'border-l-emerald-500'
                       : isLoss
-                      ? 'border-rose-200 dark:border-rose-800/50'
-                      : 'border-slate-200 dark:border-slate-700'
+                      ? 'border-l-banner'
+                      : 'border-l-gold'
                   }`}
                 >
-                  <div className={`h-1 w-full ${
-                    isWin
-                      ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                      : isLoss
-                      ? 'bg-gradient-to-r from-rose-400 to-red-500'
-                      : 'bg-gradient-to-r from-slate-300 to-slate-400'
-                  }`} />
-
                   <div className="p-4 sm:p-5">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex gap-2.5 items-center">
-                        <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 p-1 flex items-center justify-center shadow-sm relative group" title={`Uniforme ${match.kit || 1}`}>
+                    <div className="mb-4 flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/40 p-1 shadow-sm" title={`Uniforme ${match.kit || 1}`}>
                           <img
                             src={match.kit === 2
                               ? "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/2u.png"
                               : "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/1u.png"
                             }
                             alt={`Uniforme ${match.kit || 1}`}
-                            className="max-h-full max-w-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform duration-200"
+                            className="max-h-full max-w-full object-contain drop-shadow-sm"
                           />
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 capitalize block">
-                            {matchDate.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          <span className="block text-xs font-semibold capitalize text-muted-foreground">
+                            {venue.date}
                           </span>
-                          <span className="flex items-center gap-1 text-[10px] text-blue-500 dark:text-blue-400 font-bold mt-0.5">
-                            🕐 {matchDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                          <span className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-gold">
+                            🕐 {venue.time} Tijuana
                           </span>
                           {match.season?.name && (
-                            <span className="text-[10px] text-violet-500 dark:text-violet-400 font-semibold mt-0.5 block">
+                            <span className="mt-0.5 block text-[10px] font-semibold text-banner">
                               📅 {match.season.name}
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                           isWin
-                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                             : isLoss
-                            ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                            ? 'bg-banner/15 text-banner'
+                            : 'bg-gold/15 text-gold'
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
                         <MatchEditModal match={match} players={activePlayers} seasons={seasons} />
                         <form action={deleteMatch.bind(null, match.id)}>
-                          <button className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-slate-400 hover:text-rose-500 flex items-center justify-center text-xs transition-all">
+                          <button className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-banner/15 hover:text-banner">
                             ✕
                           </button>
                         </form>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex-1 text-right pr-3">
-                        <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{match.myTeam}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">Pos {match.myPos}°</p>
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex-1 pr-3 text-right">
+                        <p className="truncate text-sm font-bold text-foreground">{match.myTeam}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground">Pos {match.myPos}°</p>
                       </div>
                       <ScoreEditor
                         matchId={match.id}
@@ -144,23 +132,23 @@ export default async function MatchesPage({ searchParams }: Props) {
                         isLoss={isLoss}
                       />
                       <div className="flex-1 pl-3">
-                        <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{match.rivalTeam}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">Pos {match.rivalPos}°</p>
+                        <p className="truncate text-sm font-bold text-foreground">{match.rivalTeam}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground">Pos {match.rivalPos}°</p>
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center font-medium">
+                    <p className="text-center text-xs font-medium text-muted-foreground">
                       📍 {match.location}
                     </p>
 
                     {match.squad && match.squad.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">
+                      <div className="mt-3 border-t border-border/40 pt-3">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                           Convocados ({match.squad.length})
                         </p>
                         <div className="flex flex-wrap gap-1">
                           {match.squad.map((s: any) => (
-                            <span key={s.id} className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
+                            <span key={s.id} className="rounded-full bg-navy/10 px-2 py-0.5 text-[10px] font-medium text-navy dark:bg-gold/15 dark:text-gold">
                               {s.player.name}
                             </span>
                           ))}
@@ -169,13 +157,13 @@ export default async function MatchesPage({ searchParams }: Props) {
                     )}
 
                     {match.goals && match.goals.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                      <div className="mt-2 border-t border-border/40 pt-2">
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                           ⚽ Goleadores
                         </p>
                         <div className="flex flex-wrap gap-1">
                           {match.goals.map((g: any) => (
-                            <span key={g.id} className="text-[10px] bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-medium">
+                            <span key={g.id} className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold">
                               {g.player.name}{g.minute ? ` (${g.minute}')` : ''}
                             </span>
                           ))}

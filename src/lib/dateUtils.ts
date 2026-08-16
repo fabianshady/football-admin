@@ -1,25 +1,86 @@
-/**
- * Detecta la zona horaria del usuario
- */
-export function getUserTimezone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+
+/** Kickoff and calendar dates are always Tijuana wall-clock. */
+export const VENUE_TZ = 'America/Tijuana'
+
+function asDate(input: string | Date): Date {
+  return input instanceof Date ? input : new Date(input)
 }
 
-/**
- * Convierte una fecha local (string) + hora (string) a ISO UTC
- * @param dateStr - fecha en formato "YYYY-MM-DD"
- * @param timeStr - hora en formato "HH:MM"
- * @returns ISO string en UTC
- */
-export function convertLocalToUTC(dateStr: string, timeStr: string = "00:00"): string {
-  // Parsear la fecha
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const [hour, minute] = timeStr.split(':').map(Number)
+/** Interpret a date+time the operator typed as Tijuana time, store UTC ISO. */
+export function venueWallclockToUtcIso(dateStr: string, timeStr: string = '00:00'): string {
+  const time = timeStr.length === 5 ? `${timeStr}:00` : timeStr
+  return fromZonedTime(`${dateStr}T${time}`, VENUE_TZ).toISOString()
+}
 
-  // Crear una fecha objeto usando el constructor que interpreta como HORA LOCAL
-  // new Date(year, month, day, hour, minute, second) siempre usa hora local del usuario
-  const localDate = new Date(year, month - 1, day, hour, minute, 0)
+export function utcToVenueDateInput(input: string | Date): string {
+  return formatInTimeZone(asDate(input), VENUE_TZ, 'yyyy-MM-dd')
+}
 
-  // Convertir a ISO string (automáticamente convierte a UTC)
-  return localDate.toISOString()
+export function utcToVenueTimeInput(input: string | Date): string {
+  return formatInTimeZone(asDate(input), VENUE_TZ, 'HH:mm')
+}
+
+export function formatVenueDateTime(input: string | Date): { date: string; time: string } {
+  const instant = asDate(input)
+  const parts = new Intl.DateTimeFormat('es-MX', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: VENUE_TZ,
+  }).formatToParts(instant)
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value.replace(/\.$/, '') ?? ''
+
+  const weekday = get('weekday')
+  const day = get('day')
+  const month = get('month')
+  const hour = get('hour').padStart(2, '0')
+  const minute = get('minute').padStart(2, '0')
+
+  return {
+    date: `${weekday} ${day} ${month}`,
+    time: `${hour}:${minute}`,
+  }
+}
+
+export function formatVenueDate(input: string | Date): string {
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: VENUE_TZ,
+  }).format(asDate(input))
+}
+
+/** Date-only values (cobros, temporadas): noon in Tijuana so the calendar day stays put. */
+export function calendarDateToIso(dateStr: string): string {
+  return fromZonedTime(`${dateStr}T12:00:00`, VENUE_TZ).toISOString()
+}
+
+export function formatCalendarDate(
+  input: string | Date,
+  options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
+): string {
+  if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.trim())) {
+    return new Intl.DateTimeFormat('es-MX', {
+      ...options,
+      timeZone: VENUE_TZ,
+    }).format(fromZonedTime(`${input.trim()}T12:00:00`, VENUE_TZ))
+  }
+  return new Intl.DateTimeFormat('es-MX', {
+    ...options,
+    timeZone: VENUE_TZ,
+  }).format(asDate(input))
+}
+
+export function toCalendarInput(d: string): string {
+  if (!d) return ''
+  const trimmed = d.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  return formatInTimeZone(new Date(trimmed), VENUE_TZ, 'yyyy-MM-dd')
 }

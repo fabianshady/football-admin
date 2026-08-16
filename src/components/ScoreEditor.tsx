@@ -39,16 +39,16 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
             min="0"
             value={scoreHome}
             onChange={(e) => setScoreHome(parseInt(e.target.value) || 0)}
-            className="w-10 h-9 text-center border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="field-input h-9 w-10 px-0 text-center font-bold"
             disabled={isPending}
           />
-          <span className="text-slate-400 font-bold text-xs">—</span>
+          <span className="text-xs font-bold text-muted-foreground">—</span>
           <input
             type="number"
             min="0"
             value={scoreAway}
             onChange={(e) => setScoreAway(parseInt(e.target.value) || 0)}
-            className="w-10 h-9 text-center border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="field-input h-9 w-10 px-0 text-center font-bold"
             disabled={isPending}
           />
         </div>
@@ -56,14 +56,14 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg disabled:opacity-50 transition"
+            className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
             {isPending ? '…' : '✓ OK'}
           </button>
           <button
             onClick={handleCancel}
             disabled={isPending}
-            className="text-[10px] font-bold bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition"
+            className="rounded-lg bg-muted px-2.5 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted/80"
           >
             ✕
           </button>
@@ -75,12 +75,12 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
   return (
     <button
       onClick={() => setIsEditing(true)}
-      className={`px-4 py-2 rounded-xl font-mono font-black text-xl cursor-pointer hover:ring-2 hover:ring-blue-400/50 hover:scale-105 transition-all ${
+      className={`cursor-pointer rounded-xl px-4 py-2 font-display text-xl font-bold tabular-nums transition-all hover:scale-105 hover:ring-2 hover:ring-gold/50 ${
         isWin
-          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
           : isLoss
-          ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400'
-          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+          ? 'bg-banner/15 text-banner'
+          : 'bg-gold/15 text-gold'
       }`}
       title="Clic para editar marcador"
     >

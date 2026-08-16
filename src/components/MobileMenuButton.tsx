@@ -7,10 +7,9 @@ export default function MobileMenuButton({ children }: { children: React.ReactNo
 
   return (
     <>
-      {/* Hamburger Button - visible only on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[60] bg-gray-900 text-white p-3 rounded-lg shadow-lg"
+        className="fixed left-4 top-4 z-[60] rounded-xl border border-gold/30 bg-[hsl(218_68%_13%)] p-3 text-navy-foreground shadow-lg lg:hidden"
         aria-label="Toggle menu"
       >
         {isOpen ? (
@@ -24,19 +23,17 @@ export default function MobileMenuButton({ children }: { children: React.ReactNo
         )}
       </button>
 
-      {/* Overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Sidebar wrapper */}
       <div
         className={`
-          fixed h-full z-50 transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static
+          fixed z-50 h-full self-stretch transition-transform duration-300 ease-in-out
+          lg:static lg:h-auto lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
         onClick={() => setIsOpen(false)}
