@@ -1,7 +1,7 @@
 # =============================================================================
 # STAGE 1: DEPENDENCIES
 # =============================================================================
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 # libc6-compat required for Next.js on Alpine Linux
 RUN apk add --no-cache libc6-compat
@@ -16,7 +16,7 @@ RUN npm ci --ignore-scripts
 # =============================================================================
 # STAGE 2: BUILDER
 # =============================================================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 RUN apk add --no-cache libc6-compat
 
@@ -25,13 +25,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_ values are embedded into the browser bundle during compilation.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # =============================================================================
 # STAGE 3: RUNNER (PRODUCTION)
 # =============================================================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 

@@ -18,6 +18,12 @@ export async function login(formData: FormData) {
         redirect('/login?error=' + encodeURIComponent(error.message))
     }
 
+    const { data: admin, error: roleError } = await supabase.rpc('is_admin')
+    if (roleError || admin !== true) {
+        await supabase.auth.signOut()
+        redirect('/login?error=' + encodeURIComponent(roleError?.message || 'Esta cuenta no tiene acceso de administrador'))
+    }
+
     revalidatePath('/', 'layout')
     redirect('/')
 }

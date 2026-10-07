@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation'
 import { ClubLogo } from '@/components/ClubLogo'
 import LogoutButton from '@/components/LogoutButton'
 import { cn } from '@/lib/utils'
+import { ThemeControl } from '@/components/ThemeControl'
 
 const gestion = [
   { href: '/admin/players', label: 'Jugadores', emoji: '🏃' },
   { href: '/admin/payments', label: 'Pagos y Deudas', emoji: '💸' },
   { href: '/admin/seasons', label: 'Temporadas', emoji: '📅' },
+  { href: '/admin/club', label: 'Nuestro club', emoji: '⚙️' },
 ]
 
 const cancha = [
@@ -24,11 +26,12 @@ function NavLink({ href, label, emoji }: { href: string; label: string; emoji: s
   return (
     <Link
       href={href}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all',
+        'flex min-h-12 items-center gap-3 rounded-full px-4 py-3 text-sm font-medium transition-all',
         active
-          ? 'border border-gold/35 bg-gold/15 text-gold'
-          : 'text-navy-foreground/70 hover:bg-white/5 hover:text-navy-foreground'
+          ? 'bg-secondary text-secondary-foreground'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
       )}
     >
       <span className="text-base">{emoji}</span>
@@ -39,7 +42,7 @@ function NavLink({ href, label, emoji }: { href: string; label: string; emoji: s
 
 export default function DashboardSidebar() {
   return (
-    <aside className="flex h-full min-h-screen w-64 shrink-0 flex-col border-r border-gold/15 bg-[hsl(218_68%_13%)] text-navy-foreground shadow-2xl">
+    <aside className="flex h-full min-h-screen w-64 shrink-0 flex-col border-r border-border bg-card text-foreground">
       <div className="border-b border-gold/15 p-5">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -76,8 +79,9 @@ export default function DashboardSidebar() {
       </nav>
 
       <div className="border-t border-gold/15 p-3">
+        <div className="mb-4"><ThemeControl /></div>
         <LogoutButton />
-        <p className="mt-2 text-center text-xs text-navy-foreground/35">
+        <p className="mt-2 text-center text-xs text-muted-foreground">
           fabianshady &copy; {new Date().getFullYear()}
         </p>
       </div>

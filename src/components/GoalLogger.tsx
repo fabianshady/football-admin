@@ -1,11 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { addGoal, removeGoal } from '@/app/actions/goals'
 import { formatVenueDate } from '@/lib/dateUtils'
 
 export default function GoalLogger({ matches }: { matches: any[] }) {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState('')
+  function logGoal(matchId: string, playerId: string, remove: boolean) {
+    setError('')
+    startTransition(async () => {
+      try { await (remove ? removeGoal(matchId, playerId) : addGoal(matchId, playerId)) }
+      catch (error) { setError(error instanceof Error ? error.message : 'No se pudo registrar el gol') }
+    })
+  }
 
   const toggleMatch = (id: string) => {
     setExpandedMatch(expandedMatch === id ? null : id)
@@ -22,6 +31,7 @@ export default function GoalLogger({ matches }: { matches: any[] }) {
 
   return (
     <div className="space-y-3">
+      {error && <p role="alert" className="rounded-2xl bg-banner/10 p-4 text-sm text-banner">{error}</p>}
       {matches.map(match => {
         const totalTeamGoals = match.goals.length
         const isExpanded = expandedMatch === match.id
@@ -33,7 +43,7 @@ export default function GoalLogger({ matches }: { matches: any[] }) {
               className="flex w-full items-center justify-between bg-muted/30 p-4 text-left transition-colors hover:bg-muted/50"
             >
               <div>
-                <h3 className="text-sm font-bold text-foreground">vs {match.rivalTeam}</h3>
+                <h3 className="text-sm font-bold text-foreground">{match.team?.name || 'Nosotros'} vs {match.rivalTeam}</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {formatVenueDate(match.date)} &bull; {match.location}
                 </p>
@@ -76,8 +86,9 @@ export default function GoalLogger({ matches }: { matches: any[] }) {
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => removeGoal(match.id, sq.playerId)}
-                              disabled={playerGoals === 0}
+                              onClick={() => logGoal(match.id, sq.playerId, true)}
+                              aria-label={`Quitar gol de ${sq.player.name}`}
+                              disabled={pending || playerGoals === 0}
                               className="flex h-7 w-7 items-center justify-center rounded-lg bg-banner/15 text-sm font-black text-banner transition-all hover:bg-banner/25 disabled:cursor-not-allowed disabled:opacity-25"
                             >
                               −
@@ -88,7 +99,9 @@ export default function GoalLogger({ matches }: { matches: any[] }) {
                             </span>
 
                             <button
-                              onClick={() => addGoal(match.id, sq.playerId)}
+                              onClick={() => logGoal(match.id, sq.playerId, false)}
+                              aria-label={`Agregar gol de ${sq.player.name}`}
+                              disabled={pending}
                               className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-sm font-black text-emerald-600 transition-all hover:bg-emerald-500/25 active:scale-90"
                             >
                               +

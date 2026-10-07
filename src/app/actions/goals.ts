@@ -1,12 +1,12 @@
 'use server'
 
-import { v4 as uuidv4 } from 'uuid'
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/admin'
+import { requiredText } from '@/lib/validation'
 import { revalidatePath } from 'next/cache'
 
 // 1. Top Goleadores (filtrable por temporada vía partidos de esa temporada)
 export async function getTopScorers(seasonId?: string | null) {
-  const supabase = await createClient()
+  const supabase = await requireAdmin()
 
   // If filtering by season, get match IDs for that season first
   let seasonMatchIds: string[] | null = null
@@ -47,10 +47,10 @@ export async function getTopScorers(seasonId?: string | null) {
 
 // 2. Partidos con goles desglosados
 export async function getMatchesWithGoals(seasonId?: string | null) {
-  const supabase = await createClient()
+  const supabase = await requireAdmin()
   let query = supabase
     .from('Match')
-    .select('*, squad:MatchSquad(*, player:Player(*)), goals:Goal(*), season:season(*)')
+    .select('*, team:team(*), squad:MatchSquad(*, player:Player(*)), goals:Goal(*), season:season(*)')
     .order('date', { ascending: false })
 
   if (seasonId) {
@@ -64,15 +64,17 @@ export async function getMatchesWithGoals(seasonId?: string | null) {
 
 // 3. ¡GOL!
 export async function addGoal(matchId: string, playerId: string) {
-  const supabase = await createClient()
-  const { error } = await supabase.from('Goal').insert({ id: uuidv4(), matchId, playerId })
+  const supabase = await requireAdmin()
+  const { error } = await supabase.from('Goal').insert({ matchId: requiredText(matchId, 'Partido'), playerId: requiredText(playerId, 'Jugador') })
   if (error) throw new Error(error.message)
   revalidatePath('/admin/goals')
 }
 
 // 4. VAR (Quitar gol)
 export async function removeGoal(matchId: string, playerId: string) {
-  const supabase = await createClient()
+  const supabase = await requireAdmin()
+  requiredText(matchId, 'Partido')
+  requiredText(playerId, 'Jugador')
   const { data: goal, error: findErr } = await supabase
     .from('Goal')
     .select('id')

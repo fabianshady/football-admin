@@ -1,0 +1,26 @@
+/* Synchronized with the public football app's semantic palette. */
+:root {
+  color-scheme: light;
+  --background: #f7f8fc; --foreground: #1b2a4a;
+  --card: #ffffff; --card-foreground: #1b2a4a;
+  --primary: #1b2a4a; --primary-foreground: #ffffff;
+  --secondary: #e8edf6; --secondary-foreground: #253858;
+  --muted: #edf0f6; --muted-foreground: #5c677c;
+  --accent: #f4e7c9; --accent-foreground: #53401b;
+  --border: #dbe1ec; --input: #c6cfdf; --ring: #94702c;
+  --gold: #89651f; --gold-fill: #d5af62;
+  --navy: #1b2a4a; --navy-foreground: #ffffff;
+  --success: #287354; --danger: #b43546;
+}
+[data-theme=dark] {
+  color-scheme: dark;
+  --background: #111827; --foreground: #edf1fa;
+  --card: #1b2537; --card-foreground: #edf1fa;
+  --primary: #b9cbee; --primary-foreground: #172641;
+  --secondary: #29364d; --secondary-foreground: #dbe5fa;
+  --muted: #222e43; --muted-foreground: #acb8cd;
+  --accent: #453a26; --accent-foreground: #f3d595;
+  --border: #35415a; --input: #465674; --ring: #e0bd76;
+  --gold: #e0bd76; --gold-fill: #d5af62;
+  --success: #84cbaa; --danger: #f29aa5;
+}

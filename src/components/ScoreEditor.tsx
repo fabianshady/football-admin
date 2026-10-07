@@ -16,11 +16,15 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
   const [scoreHome, setScoreHome] = useState(initialHome)
   const [scoreAway, setScoreAway] = useState(initialAway)
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState('')
 
   const handleSave = () => {
     startTransition(async () => {
-      await updateMatchScore(matchId, scoreHome, scoreAway)
-      setIsEditing(false)
+      setError('')
+      try {
+        await updateMatchScore(matchId, scoreHome, scoreAway)
+        setIsEditing(false)
+      } catch (error) { setError(error instanceof Error ? error.message : 'No se pudo guardar el marcador') }
     })
   }
 
@@ -36,6 +40,7 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
         <div className="flex items-center gap-1.5">
           <input
             type="number"
+            aria-label="Goles de nosotros"
             min="0"
             value={scoreHome}
             onChange={(e) => setScoreHome(parseInt(e.target.value) || 0)}
@@ -45,6 +50,7 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
           <span className="text-xs font-bold text-muted-foreground">—</span>
           <input
             type="number"
+            aria-label="Goles del rival"
             min="0"
             value={scoreAway}
             onChange={(e) => setScoreAway(parseInt(e.target.value) || 0)}
@@ -68,13 +74,19 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
             ✕
           </button>
         </div>
+        {error && <p role="alert" className="text-xs text-banner">{error}</p>}
       </div>
     )
   }
 
   return (
     <button
-      onClick={() => setIsEditing(true)}
+      onClick={() => {
+        setScoreHome(initialHome)
+        setScoreAway(initialAway)
+        setError('')
+        setIsEditing(true)
+      }}
       className={`cursor-pointer rounded-xl px-4 py-2 font-display text-xl font-bold tabular-nums transition-all hover:scale-105 hover:ring-2 hover:ring-gold/50 ${
         isWin
           ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'

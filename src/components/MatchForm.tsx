@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import { createMatch } from '@/app/actions/matches'
 import { venueWallclockToUtcIso } from '@/lib/dateUtils'
 import type { Season } from '@/app/actions/seasons'
+import MatchScheduleFields from './MatchScheduleFields'
+import type { Team, KickoffSlot } from '@/lib/club'
 
 type Player = {
   id: string
@@ -15,10 +18,12 @@ type Player = {
 type Props = {
   players: Player[]
   seasons: Season[]
+  teams: Team[]
+  slots: KickoffSlot[]
   defaultSeasonId?: string | null
 }
 
-export default function MatchForm({ players, seasons, defaultSeasonId }: Props) {
+export default function MatchForm({ players, seasons, teams, slots, defaultSeasonId }: Props) {
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [selectedKit, setSelectedKit] = useState<number>(1)
   const [isOpen, setIsOpen] = useState(false)
@@ -38,15 +43,14 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     const dateValue = formData.get('date') as string
-    const timeValue = formData.get('time') as string || '20:00'
-
-    formData.set('date', venueWallclockToUtcIso(dateValue, timeValue))
+    const timeValue = formData.get('time') as string
     formData.set('kit', selectedKit.toString())
 
     selectedPlayers.forEach(id => formData.append('squad', id))
 
     startTransition(async () => {
       try {
+        formData.set('date', venueWallclockToUtcIso(dateValue, timeValue))
         await createMatch(formData)
         setSelectedPlayers([])
         setSelectedKit(1)
@@ -86,21 +90,10 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
 
       <form action={handleSubmit} className="space-y-5 p-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label className="field-label">Mi Equipo</label>
-            <input name="myTeam" type="text" placeholder="Ej: Filial Sub-20" required disabled={isPending} className="field-input" />
-          </div>
+          <MatchScheduleFields teams={teams} slots={slots} pending={isPending} />
           <div>
             <label className="field-label">Rival</label>
             <input name="rivalTeam" type="text" placeholder="Ej: Real Madrid" required disabled={isPending} className="field-input" />
-          </div>
-          <div>
-            <label className="field-label">Fecha</label>
-            <input name="date" type="date" required disabled={isPending} className="field-input" />
-          </div>
-          <div>
-            <label className="field-label">Hora (Tijuana)</label>
-            <input name="time" type="time" defaultValue="20:00" required disabled={isPending} className="field-input" />
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Ubicación</label>
@@ -125,7 +118,7 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Mi Pos.</label>
+              <label className="field-label">Pos. Nosotros</label>
               <input name="myPos" type="number" min="1" placeholder="1" required disabled={isPending} className="field-input" />
             </div>
             <div>
@@ -135,11 +128,11 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">Local</label>
+              <label className="field-label">Nosotros</label>
               <input name="scoreHome" type="number" min="0" defaultValue="0" disabled={isPending} className="field-input" />
             </div>
             <div>
-              <label className="field-label">Visitante</label>
+              <label className="field-label">Rival</label>
               <input name="scoreAway" type="number" min="0" defaultValue="0" disabled={isPending} className="field-input" />
             </div>
           </div>
@@ -160,7 +153,9 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
                 }`}
               >
                 <div className="relative mb-2 flex h-20 w-20 items-center justify-center">
-                  <img
+                  <Image
+                    width={80}
+                    height={80}
                     src={`https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/${kit}u.png`}
                     alt={`Uniforme ${kit}`}
                     className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-110"
@@ -192,6 +187,8 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
                 key={player.id}
                 type="button"
                 onClick={() => togglePlayer(player.id)}
+                aria-pressed={selectedPlayers.includes(player.id)}
+                disabled={isPending}
                 className={`group rounded-xl p-2.5 text-left text-xs transition-all ${
                   selectedPlayers.includes(player.id)
                     ? 'bg-navy text-navy-foreground shadow-md dark:bg-gold dark:text-navy'
@@ -211,13 +208,13 @@ export default function MatchForm({ players, seasons, defaultSeasonId }: Props) 
         </div>
 
         {error && (
-          <p className="text-sm font-medium text-banner">{error}</p>
+            <p role="alert" className="text-sm font-medium text-banner">{error}</p>
         )}
 
         <div className="flex gap-3 border-t border-border/50 pt-2">
           <button
             type="submit"
-            disabled={isPending || seasons.length === 0}
+            disabled={isPending || seasons.length === 0 || teams.length === 0}
             className="btn-primary"
           >
             {isPending ? 'Guardando…' : 'Guardar Partido'}

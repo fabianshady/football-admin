@@ -17,10 +17,10 @@ export default function EventForm({ seasons, defaultSeasonId }: Props) {
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     const dateValue = formData.get('date') as string
-    formData.set('date', calendarDateToIso(dateValue))
 
     startTransition(async () => {
       try {
+        formData.set('date', calendarDateToIso(dateValue))
         await createEvent(formData)
         const form = document.getElementById('event-form') as HTMLFormElement | null
         form?.reset()
@@ -51,7 +51,7 @@ export default function EventForm({ seasons, defaultSeasonId }: Props) {
           <div>
             <label className="field-label">Costo ($)</label>
             <input
-              name="cost" type="number" step="0.5" placeholder="50" required
+              name="cost" type="number" min="0" step="0.01" placeholder="50" required
               disabled={isPending}
               className="field-input w-28"
             />
@@ -90,7 +90,7 @@ export default function EventForm({ seasons, defaultSeasonId }: Props) {
           </button>
         </form>
         {error && (
-          <p className="mt-3 text-sm font-medium text-banner">{error}</p>
+            <p role="alert" className="mt-3 text-sm font-medium text-banner">{error}</p>
         )}
         {seasons.length === 0 && (
           <p className="mt-3 text-sm text-gold">Crea una temporada antes de registrar cobros.</p>

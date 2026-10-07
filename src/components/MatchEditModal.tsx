@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import Image from 'next/image'
 import { updateMatch } from '@/app/actions/matches'
 import { utcToVenueDateInput, utcToVenueTimeInput, venueWallclockToUtcIso } from '@/lib/dateUtils'
 import type { Season } from '@/app/actions/seasons'
+import MatchScheduleFields from './MatchScheduleFields'
+import type { Team, KickoffSlot } from '@/lib/club'
 
 type Player = {
   id: string
@@ -16,12 +19,18 @@ type Props = {
   match: any
   players: Player[]
   seasons: Season[]
+  teams: Team[]
+  slots: KickoffSlot[]
 }
 
-export default function MatchEditModal({ match, players, seasons }: Props) {
+export default function MatchEditModal({ match, players, seasons, teams, slots }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.showModal()
+  }, [isOpen])
 
   const initialDateStr = utcToVenueDateInput(match.date)
   const initialTimeStr = utcToVenueTimeInput(match.date)
@@ -43,9 +52,7 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
   const handleSubmit = async (formData: FormData) => {
     setError(null)
     const dateValue = formData.get('date') as string
-    const timeValue = formData.get('time') as string || '20:00'
-
-    formData.set('date', venueWallclockToUtcIso(dateValue, timeValue))
+    const timeValue = formData.get('time') as string
     formData.set('id', match.id)
     formData.set('kit', selectedKit.toString())
 
@@ -53,6 +60,11 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
 
     startTransition(async () => {
       try {
+        // Keep the exact stored instant when the operator did not change kickoff.
+        // This also preserves seconds and the chosen side of an autumn DST overlap.
+        formData.set('date', dateValue === initialDateStr && timeValue === initialTimeStr
+          ? new Date(match.date).toISOString()
+          : venueWallclockToUtcIso(dateValue, timeValue))
         await updateMatch(formData)
         setIsOpen(false)
       } catch (e: any) {
@@ -64,7 +76,12 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setSelectedPlayers(initialSelectedPlayers)
+          setSelectedKit(initialKit)
+          setError(null)
+          setIsOpen(true)
+        }}
         className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-gold/15 hover:text-gold"
         title="Editar detalles del partido"
       >
@@ -74,15 +91,16 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="glass-card max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl shadow-xl">
+    <dialog ref={dialogRef} onCancel={() => setIsOpen(false)} aria-labelledby="match-edit-title" className="m-auto w-[calc(100%-2rem)] max-w-3xl rounded-3xl bg-card p-0 text-foreground backdrop:bg-black/50">
+      <div className="glass-card max-h-[90vh] w-full overflow-y-auto rounded-3xl shadow-xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 bg-card/90 px-5 py-4 backdrop-blur">
-          <h2 className="flex items-center gap-2 font-display font-bold tracking-wide text-foreground">
+          <h2 id="match-edit-title" className="flex items-center gap-2 font-display font-bold tracking-wide text-foreground">
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-navy text-xs font-black text-navy-foreground dark:bg-gold dark:text-navy">✎</span>
             Editar Partido
           </h2>
           <button
             type="button"
+            aria-label="Cerrar edición de partido"
             onClick={() => setIsOpen(false)}
             className="text-sm text-muted-foreground hover:text-foreground"
           >
@@ -92,21 +110,10 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
 
         <form action={handleSubmit} className="space-y-5 p-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="field-label">Mi Equipo</label>
-              <input name="myTeam" type="text" defaultValue={match.myTeam} required disabled={isPending} className="field-input" />
-            </div>
+            <MatchScheduleFields teams={teams} slots={slots} pending={isPending} teamId={match.teamId} date={initialDateStr} time={initialTimeStr} override={match.schedule_override} />
             <div>
               <label className="field-label">Rival</label>
               <input name="rivalTeam" type="text" defaultValue={match.rivalTeam} required disabled={isPending} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label">Fecha</label>
-              <input name="date" type="date" defaultValue={initialDateStr} required disabled={isPending} className="field-input" />
-            </div>
-            <div>
-              <label className="field-label">Hora (Tijuana)</label>
-              <input name="time" type="time" defaultValue={initialTimeStr} required disabled={isPending} className="field-input" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Ubicación</label>
@@ -116,6 +123,7 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
               <label className="field-label">Temporada</label>
               <select
                 name="seasonid"
+                required
                 defaultValue={match.seasonid || seasons.find(s => s.active)?.id || ''}
                 disabled={isPending}
                 className="field-input"
@@ -129,7 +137,7 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="field-label">Mi Pos.</label>
+                <label className="field-label">Pos. Nosotros</label>
                 <input name="myPos" type="number" min="1" defaultValue={match.myPos} required disabled={isPending} className="field-input" />
               </div>
               <div>
@@ -154,7 +162,9 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
                   }`}
                 >
                   <div className="relative mb-2 flex h-20 w-20 items-center justify-center">
-                    <img
+                    <Image
+                      width={80}
+                      height={80}
                       src={`https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/${kit}u.png`}
                       alt={`Uniforme ${kit}`}
                       className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-110"
@@ -184,8 +194,10 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
               {players.map(player => (
                 <button
                   key={player.id}
-                  type="button"
-                  onClick={() => togglePlayer(player.id)}
+                type="button"
+                onClick={() => togglePlayer(player.id)}
+                aria-pressed={selectedPlayers.includes(player.id)}
+                disabled={isPending}
                   className={`group rounded-xl p-2.5 text-left text-xs transition-all ${
                     selectedPlayers.includes(player.id)
                       ? 'bg-navy text-navy-foreground shadow-md dark:bg-gold dark:text-navy'
@@ -202,7 +214,7 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
           </div>
 
           {error && (
-            <p className="text-sm font-medium text-banner">{error}</p>
+            <p role="alert" className="text-sm font-medium text-banner">{error}</p>
           )}
 
           <div className="flex gap-3 border-t border-border/50 pt-2">
@@ -215,6 +227,6 @@ export default function MatchEditModal({ match, players, seasons }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   )
 }
