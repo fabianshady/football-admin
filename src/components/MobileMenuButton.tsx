@@ -1,16 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function MobileMenuButton({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setIsOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-4 top-4 z-[60] rounded-xl border border-gold/30 bg-[hsl(218_68%_13%)] p-3 text-navy-foreground shadow-lg lg:hidden"
-        aria-label="Toggle menu"
+        className="fixed left-4 top-4 z-[60] rounded-full border border-border bg-card p-3 text-foreground shadow-sm lg:hidden"
+        aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
+        aria-expanded={isOpen}
+        aria-controls="dashboard-navigation"
       >
         {isOpen ? (
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -31,12 +38,13 @@ export default function MobileMenuButton({ children }: { children: React.ReactNo
       )}
 
       <div
+        id="dashboard-navigation"
         className={`
           fixed z-50 h-full self-stretch transition-transform duration-300 ease-in-out
           lg:static lg:h-auto lg:translate-x-0
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible'}
         `}
-        onClick={() => setIsOpen(false)}
+        onClick={event => { if ((event.target as HTMLElement).closest('a')) setIsOpen(false) }}
       >
         {children}
       </div>

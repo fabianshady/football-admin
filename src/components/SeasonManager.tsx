@@ -188,7 +188,7 @@ export default function SeasonManager({ seasons }: { seasons: Season[] }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
-                <tr className="bg-[hsl(218_68%_13%)] text-navy-foreground">
+                <tr className="bg-secondary text-secondary-foreground">
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide">Nombre</th>
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide">Inicio</th>
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide">Fin</th>

@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { getPaymentMatrix, togglePayment, deleteEvent } from '@/app/actions/payments'
+import { getPaymentMatrix, deleteEvent } from '@/app/actions/payments'
+import PaymentToggle from '@/components/PaymentToggle'
 import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
 import EventForm from '@/components/EventForm'
 import SeasonFilter from '@/components/SeasonFilter'
@@ -93,24 +94,24 @@ export default async function PaymentsPage({ searchParams }: Props) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[400px] text-left text-sm">
             <thead>
-              <tr className="bg-[hsl(218_68%_13%)] text-navy-foreground">
-                <th className="sticky left-0 z-10 w-36 bg-[hsl(218_68%_13%)] px-4 py-3.5 text-xs font-semibold uppercase tracking-wide sm:w-48">
+              <tr className="bg-secondary text-secondary-foreground">
+                <th className="sticky left-0 z-10 w-36 bg-secondary px-4 py-3.5 text-xs font-semibold uppercase tracking-wide sm:w-48">
                   Jugador
                 </th>
-                <th className="w-28 bg-[hsl(218_50%_10%)] px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-banner">
+                <th className="w-28 bg-secondary px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-banner">
                   Deuda
                 </th>
                 {events.map((event: any) => (
                   <th key={event.id} className="group relative min-w-[110px] border-l border-white/10 px-3 py-3.5 text-center">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-bold text-gold">${event.cost}</span>
-                      <span className="max-w-[90px] truncate text-[11px] text-navy-foreground/70">{event.name}</span>
-                      <span className="text-[10px] text-navy-foreground/45">
+                      <span className="max-w-[90px] truncate text-[11px] text-secondary-foreground">{event.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
                         {formatCalendarDate(event.date, { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
-                    <form action={deleteEvent.bind(null, event.id)} className="absolute right-1.5 top-1.5 opacity-0 transition group-hover:opacity-100">
-                      <button className="flex h-4 w-4 items-center justify-center rounded bg-banner/80 text-[9px] text-white hover:bg-banner">✕</button>
+                    <form action={deleteEvent.bind(null, event.id)} className="mt-2">
+                      <button aria-label={`Eliminar cobro ${event.name}`} className="rounded-full px-3 text-xs text-banner hover:bg-banner/10">Eliminar</button>
                     </form>
                   </th>
                 ))}
@@ -145,15 +146,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                       )
                       return (
                         <td key={event.id} className="border-l border-border/30 p-1.5 text-center">
-                          <form action={togglePayment.bind(null, payment.id, payment.paid)}>
-                            <button className={`w-full rounded-lg px-2 py-1.5 text-xs font-bold transition-all ${
-                              payment.paid
-                                ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/20 hover:bg-emerald-500/25 dark:text-emerald-400'
-                                : 'bg-banner/15 text-banner ring-1 ring-banner/20 hover:bg-banner/25'
-                            }`}>
-                              {payment.paid ? '✓ Pagó' : 'DEBE'}
-                            </button>
-                          </form>
+                          <PaymentToggle id={payment.id} paid={payment.paid} />
                         </td>
                       )
                     })}

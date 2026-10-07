@@ -9,8 +9,21 @@ function asDate(input: string | Date): Date {
 
 /** Interpret a date+time the operator typed as Tijuana time, store UTC ISO. */
 export function venueWallclockToUtcIso(dateStr: string, timeStr: string = '00:00'): string {
+  validateCalendarDate(dateStr)
+  if (!/^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(timeStr)) throw new Error('Hora inválida')
   const time = timeStr.length === 5 ? `${timeStr}:00` : timeStr
-  return fromZonedTime(`${dateStr}T${time}`, VENUE_TZ).toISOString()
+  const instant = fromZonedTime(`${dateStr}T${time}`, VENUE_TZ)
+  if (formatInTimeZone(instant, VENUE_TZ, 'yyyy-MM-dd\'T\'HH:mm:ss') !== `${dateStr}T${time}`) {
+    throw new Error('Esta hora no existe en Tijuana por el cambio de horario')
+  }
+  return instant.toISOString()
+}
+
+export function validateCalendarDate(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(`${value}T12:00:00Z`)) || new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) !== value) {
+    throw new Error('Fecha de calendario inválida')
+  }
+  return value
 }
 
 export function utcToVenueDateInput(input: string | Date): string {
@@ -59,6 +72,7 @@ export function formatVenueDate(input: string | Date): string {
 
 /** Date-only values (cobros, temporadas): noon in Tijuana so the calendar day stays put. */
 export function calendarDateToIso(dateStr: string): string {
+  validateCalendarDate(dateStr)
   return fromZonedTime(`${dateStr}T12:00:00`, VENUE_TZ).toISOString()
 }
 

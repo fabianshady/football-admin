@@ -4,6 +4,13 @@ import { ClubLogo } from '@/components/ClubLogo'
 
 const cards = [
   {
+    href: '/admin/club',
+    emoji: '⚙️',
+    title: 'Nuestro club',
+    desc: 'Contacto, datos de pago y horarios de los equipos.',
+    icon: 'bg-secondary text-secondary-foreground',
+  },
+  {
     href: '/admin/payments',
     emoji: '💸',
     title: 'Cobrar Cuotas',

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow_Condensed, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
+import { themeScript } from '@/lib/theme';
 import "./globals.css";
 
 const inter = Inter({
@@ -8,17 +9,10 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const barlowCondensed = Barlow_Condensed({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-  variable: "--font-barlow-condensed",
-});
-
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
-    { media: "(prefers-color-scheme: dark)", color: "#071221" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f8fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#111827" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -41,7 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${barlowCondensed.variable}`}>
+    <html lang="es" className={inter.variable} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body className={inter.className}>
         <div className="min-h-screen animated-gradient-bg">{children}</div>
       </body>

@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import Image from 'next/image'
 import { getMatches, deleteMatch } from '@/app/actions/matches'
 import { getActivePlayers } from '@/app/actions/players'
 import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
@@ -8,6 +9,7 @@ import MatchEditModal from '@/components/MatchEditModal'
 import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 import { formatVenueDateTime } from '@/lib/dateUtils'
+import { getClubData } from '@/app/actions/club'
 
 type Props = {
   searchParams: Promise<{ season?: string }>
@@ -19,6 +21,7 @@ export default async function MatchesPage({ searchParams }: Props) {
   const seasonId = await resolveSeasonId(params.season)
   const matches = await getMatches(seasonId)
   const activePlayers = await getActivePlayers()
+  const { teams, slots } = await getClubData()
   const currentSeason = seasons.find(s => s.id === seasonId)
 
   return (
@@ -38,7 +41,7 @@ export default async function MatchesPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <MatchForm players={activePlayers} seasons={seasons} defaultSeasonId={seasonId} />
+      <MatchForm players={activePlayers} seasons={seasons} teams={teams} slots={slots} defaultSeasonId={seasonId} />
 
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -77,7 +80,9 @@ export default async function MatchesPage({ searchParams }: Props) {
                     <div className="mb-4 flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
                         <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/40 p-1 shadow-sm" title={`Uniforme ${match.kit || 1}`}>
-                          <img
+                          <Image
+                            width={36}
+                            height={36}
                             src={match.kit === 2
                               ? "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/2u.png"
                               : "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/1u.png"
@@ -110,9 +115,9 @@ export default async function MatchesPage({ searchParams }: Props) {
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
-                        <MatchEditModal match={match} players={activePlayers} seasons={seasons} />
+                         <MatchEditModal match={match} players={activePlayers} seasons={seasons} teams={teams} slots={slots} />
                         <form action={deleteMatch.bind(null, match.id)}>
-                          <button className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-banner/15 hover:text-banner">
+                          <button aria-label={`Eliminar partido contra ${match.rivalTeam}`} className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-banner/15 hover:text-banner">
                             ✕
                           </button>
                         </form>
@@ -121,7 +126,8 @@ export default async function MatchesPage({ searchParams }: Props) {
 
                     <div className="mb-4 flex items-center justify-between">
                       <div className="flex-1 pr-3 text-right">
-                        <p className="truncate text-sm font-bold text-foreground">{match.myTeam}</p>
+                        <p className="text-[10px] text-muted-foreground">Nosotros</p>
+                        <p className="truncate text-sm font-bold text-foreground">{match.team?.name || match.myTeam}</p>
                         <p className="text-[10px] font-medium text-muted-foreground">Pos {match.myPos}°</p>
                       </div>
                       <ScoreEditor
@@ -132,6 +138,7 @@ export default async function MatchesPage({ searchParams }: Props) {
                         isLoss={isLoss}
                       />
                       <div className="flex-1 pl-3">
+                        <p className="text-[10px] text-muted-foreground">Rival</p>
                         <p className="truncate text-sm font-bold text-foreground">{match.rivalTeam}</p>
                         <p className="text-[10px] font-medium text-muted-foreground">Pos {match.rivalPos}°</p>
                       </div>

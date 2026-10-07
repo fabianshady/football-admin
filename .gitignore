@@ -1,4 +1,24 @@
 node_modules
 .next
-.env
-.env.local
+.env*
+!.env.example
+
+# Build output and incremental metadata
+out/
+build/
+*.tsbuildinfo
+
+# Local tooling
+.vercel/
+.vscode/
+.idea/
+.agents/
+npm-debug.log*
+
+# Browser verification output and authenticated browser state
+tests/artifacts/
+test-results/
+playwright-report/
+blob-report/
+playwright/.auth/
+tests/.auth/
