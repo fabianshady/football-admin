@@ -7,23 +7,23 @@ import { venueWallclockToUtcIso } from '@/lib/dateUtils'
 import type { Season } from '@/app/actions/seasons'
 import MatchScheduleFields from './MatchScheduleFields'
 import type { Team, KickoffSlot } from '@/lib/club'
-
-type Player = {
-  id: string
-  name: string
-  dorsal: number
-  positions: string[]
-}
+import type { Tables } from '@/lib/database.types'
+import { errorMessage, type AdminPlayer } from '@/lib/phase2'
+import RivalFields from './RivalFields'
+import SquadPicker from './SquadPicker'
+import { unwrapResult } from '@/lib/actionResult'
 
 type Props = {
-  players: Player[]
+  players: AdminPlayer[]
+  rivals: Tables<'rival'>[]
   seasons: Season[]
   teams: Team[]
   slots: KickoffSlot[]
   defaultSeasonId?: string | null
 }
 
-export default function MatchForm({ players, seasons, teams, slots, defaultSeasonId }: Props) {
+export default function MatchForm({ players, rivals, seasons, teams, slots, defaultSeasonId }: Props) {
+  const [teamId, setTeamId] = useState(teams[0]?.id ?? '')
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [selectedKit, setSelectedKit] = useState<number>(1)
   const [isOpen, setIsOpen] = useState(false)
@@ -51,12 +51,12 @@ export default function MatchForm({ players, seasons, teams, slots, defaultSeaso
     startTransition(async () => {
       try {
         formData.set('date', venueWallclockToUtcIso(dateValue, timeValue))
-        await createMatch(formData)
+        unwrapResult(await createMatch(formData))
         setSelectedPlayers([])
         setSelectedKit(1)
         setIsOpen(false)
-      } catch (e: any) {
-        setError(e?.message || 'Error al guardar el partido')
+      } catch (e) {
+        setError(errorMessage(e, 'Error al guardar el partido'))
       }
     })
   }
@@ -90,11 +90,8 @@ export default function MatchForm({ players, seasons, teams, slots, defaultSeaso
 
       <form action={handleSubmit} className="space-y-5 p-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <MatchScheduleFields teams={teams} slots={slots} pending={isPending} />
-          <div>
-            <label className="field-label">Rival</label>
-            <input name="rivalTeam" type="text" placeholder="Ej: Real Madrid" required disabled={isPending} className="field-input" />
-          </div>
+          <MatchScheduleFields teams={teams} slots={slots} pending={isPending} onTeamChange={setTeamId} />
+          <RivalFields rivals={rivals} pending={isPending} />
           <div className="sm:col-span-2">
             <label className="field-label">Ubicación</label>
             <input name="location" type="text" placeholder="Ej: Estadio Azteca" required disabled={isPending} className="field-input" />
@@ -172,40 +169,7 @@ export default function MatchForm({ players, seasons, teams, slots, defaultSeaso
           </div>
         </div>
 
-        <div className="border-t border-border/50 pt-4">
-          <div className="mb-3 flex items-center gap-2">
-            <label className="field-label mb-0">Convocatoria</label>
-            {selectedPlayers.length > 0 && (
-              <span className="rounded-full bg-navy px-2 py-0.5 text-[10px] font-bold text-navy-foreground dark:bg-gold dark:text-navy">
-                {selectedPlayers.length} seleccionados
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {players.map(player => (
-              <button
-                key={player.id}
-                type="button"
-                onClick={() => togglePlayer(player.id)}
-                aria-pressed={selectedPlayers.includes(player.id)}
-                disabled={isPending}
-                className={`group rounded-xl p-2.5 text-left text-xs transition-all ${
-                  selectedPlayers.includes(player.id)
-                    ? 'bg-navy text-navy-foreground shadow-md dark:bg-gold dark:text-navy'
-                    : 'bg-muted/60 text-foreground hover:bg-muted'
-                }`}
-              >
-                <span className={`block text-xs font-black ${selectedPlayers.includes(player.id) ? 'opacity-70' : 'text-muted-foreground'}`}>
-                  #{player.dorsal}
-                </span>
-                <span className="block truncate font-semibold">{player.name}</span>
-              </button>
-            ))}
-          </div>
-          {players.length === 0 && (
-            <p className="text-sm text-muted-foreground">No hay jugadores activos para convocar</p>
-          )}
-        </div>
+        <SquadPicker players={players} teamId={teamId} selected={selectedPlayers} onToggle={togglePlayer} pending={isPending} />
 
         {error && (
             <p role="alert" className="text-sm font-medium text-banner">{error}</p>

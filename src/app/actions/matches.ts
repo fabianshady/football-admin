@@ -4,16 +4,24 @@ import { requireAdmin } from '@/lib/admin'
 import { integer, parseMatch, requiredText, validateSchedule } from '@/lib/validation'
 import type { Team } from '@/lib/club'
 import { revalidatePath } from 'next/cache'
+import { actionResult } from '@/lib/actionResult'
 
 export async function getMatches(seasonId?: string | null) {
   const supabase = await requireAdmin()
   let query = supabase.from('Match')
-    .select('*, team:team(*), squad:MatchSquad(*, player:Player(*)), goals:Goal(*, player:Player(*)), season:season(*)')
+    .select('*, rival:rival(*), team:team(*), squad:MatchSquad(*, player:Player(*)), goals:Goal(*, player:Player(*)), season:season(*)')
     .order('date', { ascending: false })
   if (seasonId) query = query.eq('seasonid', seasonId)
   const { data, error } = await query
   if (error) throw new Error(error.message)
   return data ?? []
+}
+
+export async function getRivals() {
+  const supabase = await requireAdmin()
+  const { data, error } = await supabase.from('rival').select('*').order('name')
+  if (error) throw new Error(error.message)
+  return data
 }
 
 async function persistMatch(formData: FormData, updating: boolean) {
@@ -29,31 +37,36 @@ async function persistMatch(formData: FormData, updating: boolean) {
   // Invoker RPC: match write and squad replacement succeed or roll back together.
   // Omitted score keys on edit deliberately preserve the existing scoreboard.
   const { error } = await supabase.rpc('save_match', { p_match: payload, p_player_ids: players })
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(/recorded scorer/i.test(error.message)
+    ? 'No puedes quitar un convocado con goles registrados. Quita o corrige sus goles antes de cambiar la convocatoria.' : error.message)
   revalidatePath('/admin/matches')
   revalidatePath('/admin/goals')
   revalidatePath('/')
 }
 
-export async function createMatch(formData: FormData) { await persistMatch(formData, false) }
-export async function updateMatch(formData: FormData) { await persistMatch(formData, true) }
+export async function createMatch(formData: FormData) { return actionResult(() => persistMatch(formData, false)) }
+export async function updateMatch(formData: FormData) { return actionResult(() => persistMatch(formData, true)) }
 
-export async function deleteMatch(id: string) {
+async function persistMatchDeletion(id: string) {
   const supabase = await requireAdmin()
   const { error } = await supabase.from('Match').delete().eq('id', requiredText(id, 'Partido'))
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(error.code === '23503' ? 'Este partido tiene convocatoria o goles. Su historial deportivo está protegido.' : error.message)
   revalidatePath('/admin/matches')
   revalidatePath('/admin/goals')
   revalidatePath('/')
 }
 
-export async function updateMatchScore(matchId: string, scoreHome: number, scoreAway: number) {
+async function persistMatchScore(matchId: string, scoreHome: number, scoreAway: number) {
   const supabase = await requireAdmin()
   const { error } = await supabase.from('Match')
     .update({ scoreHome: integer(scoreHome, 'Goles de nosotros'), scoreAway: integer(scoreAway, 'Goles del rival') })
     .eq('id', requiredText(matchId, 'Partido')).select('id').single()
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(/recorded|goal|score/i.test(error.message)
+    ? 'El marcador de nosotros no puede ser menor que los goles registrados. Quita primero las atribuciones sobrantes en Registro de goles.' : error.message)
   revalidatePath('/admin/matches')
   revalidatePath('/admin/goals')
   revalidatePath('/')
 }
+
+export async function deleteMatch(id: string) { return actionResult(() => persistMatchDeletion(id)) }
+export async function updateMatchScore(matchId: string, scoreHome: number, scoreAway: number) { return actionResult(() => persistMatchScore(matchId, scoreHome, scoreAway)) }

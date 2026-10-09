@@ -17,7 +17,7 @@ export function ClubLogo({
   return (
     <div className={`${box} relative flex-shrink-0 overflow-hidden rounded-full bg-gold/15 ${className}`}>
       <Image
-        src="https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/logo.png"
+        src="/logo.png"
         alt="ITJAGUARS FC"
         width={px}
         height={px}

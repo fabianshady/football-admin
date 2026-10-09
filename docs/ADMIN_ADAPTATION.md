@@ -1,5 +1,7 @@
 # Admin adaptation handoff
 
+**Phase 2 supersedes the player, rival, goal and player-status details below:** see [ADMIN_PHASE2.md](ADMIN_PHASE2.md). The Phase 2 schema and confirmed rival aliases are applied in Supabase; both repositories' database types are refreshed. See [PHASE2_HANDOFF.md](db/PHASE2_HANDOFF.md) for migration versions and verification limits.
+
 Implemented on the existing `dev` branch in `app_futbol`. Public repository files were inspected and copied, never edited by the original adaptation task. Typecheck disables incremental writes and Next build metadata now goes under `.next/cache`. Root `tsconfig.tsbuildinfo` is generated output and is ignored; repository cleanup should remove its existing Git tracking while keeping any local file.
 
 ## Parent-owned database contract
@@ -29,7 +31,7 @@ The original admin adaptation task did not apply schema changes, grants or migra
 - Every domain server action calls `requireAdmin()` which verifies identity with `getUser()` then calls `is_admin()`. Proxy, dashboard layout, login and auth callback check the role too. Only publishable Supabase credentials are used.
 - Shared match schedule fields read team/slot tables. Standard mode validates team weekday and authorized kickoff; the explicit checkbox records exceptions and permits free day/time. Server validation mirrors schedule restrictions; DB triggers remain authoritative against direct API writes and races.
 - Match scores use **Nosotros / Rival**, independent of venue. Squad and kit selection remain available. `/admin/club` updates singleton settings and displays team schedules.
-- Payment updates compare the rendered `paid` value in the database update predicate. Stale writes fail visibly, and the client refreshes authoritative data after success or conflict. Player status updates similarly reject stale state.
+- Payment updates compare the rendered `paid` value in the database update predicate. Stale writes fail visibly, and the client refreshes authoritative data after success or conflict. Phase-2 player status updates use `save_player` and report dorsal conflicts visibly.
 - Date helpers still use `America/Tijuana` and UTC storage. Calendar-only values use Tijuana noon. New validation rejects invalid dates/times and nonexistent spring-forward wall-clock times; it does not reinterpret stored dates.
 - When kickoff fields are unchanged during edit, the exact original UTC instant is preserved, including seconds and autumn DST overlap choice.
 - Public semantic colors and `itj-theme` bootstrap/control were copied to admin: navy `#1B2A4A`, gold, light/dark/system, pre-paint script, system preference changes and storage synchronization. Responsive surfaces, pill actions, focus indicators, reduced-motion support and a native modal dialog complement the existing architecture.
