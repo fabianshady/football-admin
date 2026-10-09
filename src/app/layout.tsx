@@ -19,11 +19,16 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "ITJAGUARS Admin",
+  title: { default: "ITJAGUARS FC · Administración", template: "%s · ITJAGUARS FC Admin" },
   description: "Panel de administración de ITJAGUARS FC",
+  applicationName: "ITJAGUARS FC Admin",
+  robots: { index: false, follow: false, googleBot: { index: false, follow: false, noimageindex: true } },
+  openGraph: { title: "ITJAGUARS FC · Administración", description: "Panel privado de gestión del club", locale: "es_MX", type: "website" },
+  twitter: { card: "summary", title: "ITJAGUARS FC · Administración", description: "Panel privado de gestión del club" },
   icons: {
-    icon: "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/logo.png",
-    apple: "https://vpl0mb2pgnbucvy2.public.blob.vercel-storage.com/logo.png",
+    icon: { url: "/logo.png", type: "image/png" },
+    apple: "/logo.png",
+    shortcut: "/logo.png",
   },
 };
 

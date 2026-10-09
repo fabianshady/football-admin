@@ -11,9 +11,10 @@ type Props = {
   date?: string
   time?: string
   override?: boolean
+  onTeamChange?: (id: string) => void
 }
 
-export default function MatchScheduleFields({ teams, slots, pending, teamId, date, time, override = false }: Props) {
+export default function MatchScheduleFields({ teams, slots, pending, teamId, date, time, override = false, onTeamChange }: Props) {
   const prefix = useId()
   const [selectedTeam, setSelectedTeam] = useState(teamId || teams[0]?.id || '')
   const [exception, setException] = useState(override)
@@ -22,7 +23,7 @@ export default function MatchScheduleFields({ teams, slots, pending, teamId, dat
   return <>
     <div>
       <label htmlFor={`${prefix}-team`} className="field-label">Nosotros</label>
-      <select id={`${prefix}-team`} name="teamId" value={selectedTeam} onChange={event => setSelectedTeam(event.target.value)} required disabled={pending || !teams.length} className="field-input">
+      <select id={`${prefix}-team`} name="teamId" value={selectedTeam} onChange={event => { setSelectedTeam(event.target.value); onTeamChange?.(event.target.value) }} required disabled={pending || !teams.length} className="field-input">
         <option value="" disabled>Selecciona un equipo</option>
         {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
       </select>

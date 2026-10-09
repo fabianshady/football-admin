@@ -41,7 +41,8 @@ export function parseMatch(form: FormData, updating: boolean) {
   const payload = {
     ...(updating ? { id: requiredText(form.get('id'), 'Partido') } : {}),
     teamId: requiredText(form.get('teamId'), 'Nosotros'),
-    rivalTeam: requiredText(form.get('rivalTeam'), 'Rival'),
+    ...(form.get('rivalId') ? { rivalId: requiredText(form.get('rivalId'), 'Rival') }
+      : { rivalTeam: requiredText(form.get('rivalTeam'), 'Nombre del nuevo rival') }),
     date: utcInstant(form.get('date')),
     location: requiredText(form.get('location'), 'Ubicación'),
     myPos: integer(form.get('myPos'), 'Posición de nosotros', 1),
@@ -53,6 +54,7 @@ export function parseMatch(form: FormData, updating: boolean) {
     ...(form.has('scoreAway') ? { scoreAway: integer(form.get('scoreAway'), 'Goles del rival') } : {}),
   }
   if (payload.kit !== 1 && payload.kit !== 2) throw new Error('Uniforme inválido')
+  if (form.get('rivalId') && form.get('rivalTeam')) throw new Error('Selecciona un rival existente o crea uno nuevo')
   const players = [...new Set(form.getAll('squad').map(id => requiredText(id, 'Jugador')))]
   return { payload, players }
 }

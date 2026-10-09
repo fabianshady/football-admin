@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Image from 'next/image'
-import { getMatches, deleteMatch } from '@/app/actions/matches'
+import { getMatches, getRivals } from '@/app/actions/matches'
+import DeleteMatchButton from '@/components/DeleteMatchButton'
 import { getActivePlayers } from '@/app/actions/players'
 import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
 import MatchForm from '@/components/MatchForm'
@@ -21,6 +22,7 @@ export default async function MatchesPage({ searchParams }: Props) {
   const seasonId = await resolveSeasonId(params.season)
   const matches = await getMatches(seasonId)
   const activePlayers = await getActivePlayers()
+  const rivals = await getRivals()
   const { teams, slots } = await getClubData()
   const currentSeason = seasons.find(s => s.id === seasonId)
 
@@ -41,7 +43,7 @@ export default async function MatchesPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <MatchForm players={activePlayers} seasons={seasons} teams={teams} slots={slots} defaultSeasonId={seasonId} />
+      <MatchForm players={activePlayers} rivals={rivals} seasons={seasons} teams={teams} slots={slots} defaultSeasonId={seasonId} />
 
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -60,7 +62,7 @@ export default async function MatchesPage({ searchParams }: Props) {
           </div>
         ) : (
           <AnimatedList className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match: any) => {
+            {matches.map(match => {
               const isWin = match.scoreHome > match.scoreAway
               const isLoss = match.scoreHome < match.scoreAway
               const venue = formatVenueDateTime(match.date)
@@ -115,12 +117,8 @@ export default async function MatchesPage({ searchParams }: Props) {
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
-                         <MatchEditModal match={match} players={activePlayers} seasons={seasons} teams={teams} slots={slots} />
-                        <form action={deleteMatch.bind(null, match.id)}>
-                          <button aria-label={`Eliminar partido contra ${match.rivalTeam}`} className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-banner/15 hover:text-banner">
-                            ✕
-                          </button>
-                        </form>
+                         <MatchEditModal match={match} players={activePlayers} rivals={rivals} seasons={seasons} teams={teams} slots={slots} />
+                        <DeleteMatchButton id={match.id} rival={match.rival?.name ?? match.rivalTeam} />
                       </div>
                     </div>
 
@@ -136,10 +134,11 @@ export default async function MatchesPage({ searchParams }: Props) {
                         initialAway={match.scoreAway}
                         isWin={isWin}
                         isLoss={isLoss}
+                        assigned={match.goals.length}
                       />
                       <div className="flex-1 pl-3">
                         <p className="text-[10px] text-muted-foreground">Rival</p>
-                        <p className="truncate text-sm font-bold text-foreground">{match.rivalTeam}</p>
+                        <p className="truncate text-sm font-bold text-foreground">{match.rival?.name ?? match.rivalTeam}</p>
                         <p className="text-[10px] font-medium text-muted-foreground">Pos {match.rivalPos}°</p>
                       </div>
                     </div>
@@ -154,9 +153,9 @@ export default async function MatchesPage({ searchParams }: Props) {
                           Convocados ({match.squad.length})
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {match.squad.map((s: any) => (
+                          {match.squad.map(s => (
                             <span key={s.id} className="rounded-full bg-navy/10 px-2 py-0.5 text-[10px] font-medium text-navy dark:bg-gold/15 dark:text-gold">
-                              {s.player.name}
+                              {s.player?.name ?? 'Jugador registrado'}
                             </span>
                           ))}
                         </div>
@@ -169,9 +168,9 @@ export default async function MatchesPage({ searchParams }: Props) {
                           ⚽ Goleadores
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {match.goals.map((g: any) => (
+                          {match.goals.map(g => (
                             <span key={g.id} className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium text-gold">
-                              {g.player.name}{g.minute ? ` (${g.minute}')` : ''}
+                              {g.kind === 'own_goal' ? 'Autogol rival' : g.kind === 'unknown' ? 'Sin atribución' : g.player?.name ?? 'Jugador registrado'}{g.minute !== null ? ` (${g.minute}')` : ''}
                             </span>
                           ))}
                         </div>

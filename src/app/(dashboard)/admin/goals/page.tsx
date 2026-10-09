@@ -27,7 +27,7 @@ export default async function GoalsPage({ searchParams }: Props) {
         <div>
           <h1 className="page-title">Tabla de Goleo</h1>
           <p className="page-subtitle">
-            {topScorers.reduce((a: number, s: any) => a + s.goals, 0)} goles en {matches.length} partido{matches.length !== 1 ? 's' : ''}
+            {topScorers.reduce((a, s) => a + s.goals, 0)} goles de jugadores en {matches.length} partido{matches.length !== 1 ? 's' : ''}
             {currentSeason ? ` · ${currentSeason.name}` : ''}
           </p>
         </div>
@@ -89,8 +89,8 @@ export default async function GoalsPage({ searchParams }: Props) {
               </div>
             ) : (
               <div className="divide-y divide-border/40">
-                {topScorers.map((scorer: any, index: number) => (
-                  <div key={scorer.name} className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/40">
+                {topScorers.map((scorer, index) => (
+                  <div key={scorer.id} className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/40">
                     <div className="flex items-center gap-3">
                       <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
                         index === 0 ? 'bg-gold/20 text-gold' :
@@ -123,7 +123,7 @@ export default async function GoalsPage({ searchParams }: Props) {
             <h2 className="font-display text-base font-bold tracking-wide text-foreground">Registro por Partido</h2>
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <GoalLogger matches={matches} />
+          <GoalLogger matches={matches} now={new Date().toISOString()} />
         </AnimatedItem>
       </AnimatedList>
     </AnimatedPage>

@@ -52,7 +52,7 @@ El acceso es mediante email y contraseña en `/login`. La cuenta debe existir en
 - `src/lib/admin.ts`: comprobación central del administrador.
 - `src/lib/validation.ts`: validación de formularios y contrato de las RPCs.
 - `src/lib/dateUtils.ts`: conversiones entre calendario de Tijuana e instantes UTC.
-- `src/lib/database.types.ts`: tipos generados del esquema compartido.
+- `src/lib/database.types.ts`: baseline generado con contratos fase 2 preparados del esquema compartido; regenerar tras la migración coordinada.
 - `src/components`: formularios, diálogos, controles de pagos y navegación.
 - `src/app/styles/tokens.css` y `src/app/globals.css`: tokens y Tailwind CSS 4.
 
@@ -70,7 +70,21 @@ La fuente de migraciones es `../football/supabase/migrations/`. **`2026100702491
 - `save_match(p_match jsonb, p_player_ids text[]) → text`: guarda partido y reemplaza convocatoria en una transacción. La edición omite marcadores para conservarlos.
 - `create_event_with_payments(p_name text, p_cost numeric, p_date timestamptz, p_season_id text) → text`: crea el evento y las aportaciones de jugadores activos atómicamente.
 
-Las RPCs son invoker, requieren administrador y respetan RLS. Los pagos y estados de jugador detectan actualizaciones obsoletas y muestran el conflicto al usuario.
+Las RPCs son invoker, requieren administrador y respetan RLS. Los pagos detectan actualizaciones obsoletas y muestran el conflicto al usuario.
+
+### Fase 2 (base de datos aplicada)
+
+Esta versión utiliza `20261008235036_phase2_players_rivals_goals.sql`, ya aplicada en Supabase, y `20261009032355_merge_confirmed_rival_aliases.sql`, que unifica los tres pares de rivales confirmados. Los tipos de ambos proyectos están actualizados. El contrato exacto está en `../football/docs/db/PHASE2_CONTRACT.md`. La app no ejecuta migraciones ni adapta consultas a esquemas incompletos.
+
+- Plantilla: nombre existente, apodo opcional, principal `GK CB WB DM CM AM W ST`, secundarias, lado `L R C ANY`, pie opcional `L R BOTH`, equipos actuales y estado. WB tiene grupo explícito **Carrileros** (bandas de defensa/medio). No se inventan nombres completos ni se envía el campo legacy `positions` desde los formularios.
+- `save_player(p_player jsonb,p_team_ids text[] DEFAULT NULL) → text` guarda jugador y afiliaciones atómicamente; null conserva equipos, `[]` los borra. Dorsal 1–99, único entre activos; sugerencias y conflictos visibles. Desactivar conserva el historial; no existe acción de eliminar jugador.
+- Convocatorias: `getActivePlayers()` incluye joins de afiliación. Filtro por equipo opcional, aviso de afiliación no verificada, y selección retenida al cambiar equipo; la edición conserva inactivos históricos.
+- Catálogo rival con búsqueda y select nativo; crear por nombre es explícito. Se envía `rivalId` o `rivalTeam`, nunca ambos. Solo espacios/case se normalizan en DB; FC, acentos y puntuación no se fusionan. La edición conserva identidad, instante y marcadores.
+- `add_goal(p_match_id,p_player_id DEFAULT NULL,p_kind DEFAULT 'player',p_minute DEFAULT NULL) → text`; tipos `player/own_goal/unknown`. Minuto opcional 0–120. Todos cuentan para `scoreHome`; autogol significa del rival a favor nuestro. `remove_goal(p_goal_id) → void` quita el registro concreto.
+- Registro muestra progreso y filtros de atribución pendiente/completa/todas y fecha pasada/todas. No bloquea por fecha futura. Permite corregir completos quitando registros. DB impide exceder marcador, quitar convocados goleadores o bajar marcador por debajo de registros.
+- Marca local `/logo.png`, metadata privada y `noindex/nofollow` en todo el admin.
+
+Ver [evidencia y flujos autenticados pendientes de fase 2](docs/ADMIN_PHASE2.md).
 
 El cierre financiero **`20261007190054 / financial_public_projection_lockdown`** ya fue aplicado por la tarea coordinadora mediante la herramienta de migraciones, antes del despliegue de `dev`. El privilegio `SELECT` de `anon` es **false** para `Event` y `Payment`; `v_player_debt` sigue accesible y devolvió **14 filas en la comprobación posterior** (snapshot dinámico, no un conteo garantizado). El sitio público nuevo usa esa proyección; **el sitio legacy de `main` pierde sus consultas financieras directas con el cierre**. Ver [estado de migración](docs/db/MIGRATION_HANDOFF.md); no repetir el SQL aplicado.
 

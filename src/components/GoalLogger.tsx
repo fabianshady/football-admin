@@ -1,122 +1,64 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useId, useState, useTransition } from 'react'
 import { addGoal, removeGoal } from '@/app/actions/goals'
 import { formatVenueDate } from '@/lib/dateUtils'
+import { GOAL_LABELS, goalProgress, errorMessage, parseGoal, type AdminMatch } from '@/lib/phase2'
+import type { GoalKind } from '@/lib/database.types'
+import { unwrapResult, type ActionResult } from '@/lib/actionResult'
 
-export default function GoalLogger({ matches }: { matches: any[] }) {
-  const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
+function MatchGoals({ match }: { match: AdminMatch }) {
+  const prefix = useId()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
-  function logGoal(matchId: string, playerId: string, remove: boolean) {
-    setError('')
+  const [success, setSuccess] = useState('')
+  const [kind, setKind] = useState<GoalKind>('player')
+  const [playerId, setPlayerId] = useState('')
+  const [minute, setMinute] = useState('')
+  const progress = goalProgress(match.goals.length, match.scoreHome)
+  function write(action: () => Promise<ActionResult<unknown>>, message: string) {
+    setError(''); setSuccess('')
     startTransition(async () => {
-      try { await (remove ? removeGoal(matchId, playerId) : addGoal(matchId, playerId)) }
-      catch (error) { setError(error instanceof Error ? error.message : 'No se pudo registrar el gol') }
+      try { unwrapResult(await action()); setSuccess(message) }
+      catch (error) { setError(errorMessage(error, 'No se pudo actualizar el registro')) }
     })
   }
-
-  const toggleMatch = (id: string) => {
-    setExpandedMatch(expandedMatch === id ? null : id)
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (progress.atCap) { setError('Ya se alcanzó el marcador de nosotros.'); return }
+    try {
+      const payload = parseGoal(match.id, kind === 'player' ? playerId : null, kind, minute)
+      write(() => addGoal(payload.p_match_id, payload.p_player_id, payload.p_kind, payload.p_minute), 'Gol registrado')
+    } catch (error) { setError(errorMessage(error)) }
   }
+  return <div className="space-y-4 border-t border-border p-4">
+    <p className="text-sm text-muted-foreground">Todos los tipos cuentan para nosotros. Autogol = gol del rival en su propia portería.</p>
+    <div className="grid gap-2 sm:grid-cols-2">{match.squad.map(squad => <div key={squad.id} className="rounded-xl bg-muted p-3 text-sm"><span className="font-semibold">{squad.player?.name ?? 'Jugador registrado'}</span><span className="ml-2 text-gold">{match.goals.filter(goal => goal.kind === 'player' && goal.playerId === squad.playerId).length} goles</span></div>)}</div>
+    <form onSubmit={submit} className="space-y-3">
+      <fieldset disabled={pending || progress.atCap} className="grid gap-3 sm:grid-cols-3">
+        <div><label htmlFor={`${prefix}-kind`} className="field-label">Tipo de gol</label><select id={`${prefix}-kind`} value={kind} onChange={e => setKind(e.target.value as GoalKind)} className="field-input">{Object.entries(GOAL_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></div>
+        {kind === 'player' && <div><label htmlFor={`${prefix}-player`} className="field-label">Jugador convocado</label><select id={`${prefix}-player`} required value={playerId} onChange={e => setPlayerId(e.target.value)} className="field-input"><option value="">Selecciona jugador</option>{match.squad.map(squad => <option key={squad.id} value={squad.playerId}>{squad.player?.name ?? 'Jugador registrado'}</option>)}</select></div>}
+        <div><label htmlFor={`${prefix}-minute`} className="field-label">Minuto (opcional · 0–120)</label><input id={`${prefix}-minute`} type="number" min={0} max={120} value={minute} onChange={e => setMinute(e.target.value)} className="field-input" /></div>
+      </fieldset>
+      <button disabled={pending || progress.atCap || (kind === 'player' && !match.squad.length)} className="btn-primary min-h-11">{pending ? 'Guardando…' : 'Registrar gol'}</button>
+      {progress.atCap && <p className="text-sm text-muted-foreground">Marcador completo. Puedes quitar un registro para corregir su atribución, o editar el marcador.</p>}
+    </form>
+    <ul className="space-y-2" aria-label="Goles registrados">{match.goals.map((goal, index) => <li key={goal.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"><span className="text-sm">{index + 1}. {goal.kind === 'player' ? goal.player?.name ?? 'Jugador registrado' : GOAL_LABELS[goal.kind]}{goal.minute !== null ? ` · ${goal.minute}′` : ''}</span><button type="button" disabled={pending} onClick={() => write(() => removeGoal(goal.id), 'Gol eliminado del registro')} aria-label={`Quitar gol ${index + 1}${goal.minute !== null ? ` del minuto ${goal.minute}` : ''}`} className="btn-ghost min-h-11 text-banner">Quitar</button></li>)}</ul>
+    {!match.goals.length && <p className="text-sm text-muted-foreground">Sin goles atribuidos todavía.</p>}
+    {error && <p role="alert" className="text-sm text-banner">{error}</p>}
+    {success && <p role="status" className="text-sm">{success}</p>}
+  </div>
+}
 
-  if (matches.length === 0) {
-    return (
-      <div className="glass-card rounded-2xl p-10 text-center">
-        <p className="mb-2 text-4xl">⚽</p>
-        <p className="font-medium text-muted-foreground">No hay partidos registrados aún</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {error && <p role="alert" className="rounded-2xl bg-banner/10 p-4 text-sm text-banner">{error}</p>}
-      {matches.map(match => {
-        const totalTeamGoals = match.goals.length
-        const isExpanded = expandedMatch === match.id
-
-        return (
-          <div key={match.id} className="glass-card overflow-hidden rounded-2xl">
-            <button
-              onClick={() => toggleMatch(match.id)}
-              className="flex w-full items-center justify-between bg-muted/30 p-4 text-left transition-colors hover:bg-muted/50"
-            >
-              <div>
-                <h3 className="text-sm font-bold text-foreground">{match.team?.name || 'Nosotros'} vs {match.rivalTeam}</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatVenueDate(match.date)} &bull; {match.location}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Goles</span>
-                  <span className={`font-display text-xl font-bold tabular-nums ${totalTeamGoals > 0 ? 'text-gold' : 'text-muted-foreground/40'}`}>
-                    {totalTeamGoals}
-                  </span>
-                </div>
-                <span className={`flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
-              </div>
-            </button>
-
-            {isExpanded && (
-              <div className="border-t border-border/40 p-4">
-                {match.squad.length === 0 ? (
-                  <p className="py-3 text-center text-sm italic text-muted-foreground">Sin convocatoria registrada.</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-                    {match.squad.map((sq: any) => {
-                      const playerGoals = match.goals.filter((g: any) => g.playerId === sq.playerId).length
-
-                      return (
-                        <div
-                          key={sq.playerId}
-                          className={`flex items-center justify-between rounded-xl border p-3 transition-colors ${
-                            playerGoals > 0
-                              ? 'border-gold/30 bg-gold/10'
-                              : 'border-border/40 bg-muted/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <div>
-                            <p className="text-sm font-bold leading-tight text-foreground">{sq.player.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{sq.player.positions?.[0] || 'Jugador'}</p>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => logGoal(match.id, sq.playerId, true)}
-                              aria-label={`Quitar gol de ${sq.player.name}`}
-                              disabled={pending || playerGoals === 0}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-banner/15 text-sm font-black text-banner transition-all hover:bg-banner/25 disabled:cursor-not-allowed disabled:opacity-25"
-                            >
-                              −
-                            </button>
-
-                            <span className={`w-6 text-center font-display text-base font-bold tabular-nums ${playerGoals > 0 ? 'text-gold' : 'text-muted-foreground/40'}`}>
-                              {playerGoals}
-                            </span>
-
-                            <button
-                              onClick={() => logGoal(match.id, sq.playerId, false)}
-                              aria-label={`Agregar gol de ${sq.player.name}`}
-                              disabled={pending}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 text-sm font-black text-emerald-600 transition-all hover:bg-emerald-500/25 active:scale-90"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
+export default function GoalLogger({ matches, now }: { matches: AdminMatch[]; now: string }) {
+  const [status, setStatus] = useState('pending')
+  const [played, setPlayed] = useState('played')
+  const visible = matches.filter(match => (played === 'all' || Date.parse(match.date) < Date.parse(now)) &&
+    (status === 'all' || goalProgress(match.goals.length, match.scoreHome).complete === (status === 'complete')))
+  return <div className="space-y-3">
+    <div className="grid gap-3 rounded-2xl bg-muted p-4 sm:grid-cols-2"><label className="text-sm">Atribución<select value={status} onChange={e => setStatus(e.target.value)} className="field-input mt-1"><option value="pending">Pendiente</option><option value="complete">Completa</option><option value="all">Todas</option></select></label><label className="text-sm">Fecha<select value={played} onChange={e => setPlayed(e.target.value)} className="field-input mt-1"><option value="played">Partidos pasados</option><option value="all">Todos los partidos</option></select></label></div>
+    <p role="status" className="text-xs text-muted-foreground">{visible.length} partidos. La fecha pasada no certifica que se haya jugado. La atribución completa admite correcciones.</p>
+    {visible.map(match => { const progress = goalProgress(match.goals.length, match.scoreHome); return <details key={match.id} className="glass-card overflow-hidden rounded-2xl"><summary className="min-h-11 cursor-pointer p-4"><span className="font-bold">{match.team?.name ?? 'Nosotros'} vs {match.rival?.name ?? match.rivalTeam}</span><span className="mt-1 block text-xs text-muted-foreground">{formatVenueDate(match.date)} · {match.location}</span><span className="mt-2 block text-sm text-gold">{progress.assigned}/{match.scoreHome} registrados · {progress.pending} pendientes · marcador {match.scoreHome}–{match.scoreAway}</span><progress className="mt-2 w-full accent-[var(--gold)]" value={progress.assigned} max={Math.max(1, match.scoreHome)} aria-label="Goles registrados sobre marcador de nosotros" /></summary><MatchGoals match={match} /></details> })}
+    {!visible.length && <p className="glass-card rounded-2xl p-6 text-muted-foreground">Sin partidos para estos filtros.</p>}
+  </div>
 }

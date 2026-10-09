@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { updateMatchScore } from '@/app/actions/matches'
+import { unwrapResult } from '@/lib/actionResult'
 
 type Props = {
   matchId: string
@@ -9,9 +10,10 @@ type Props = {
   initialAway: number
   isWin: boolean
   isLoss: boolean
+  assigned: number
 }
 
-export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, isLoss }: Props) {
+export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, isLoss, assigned }: Props) {
   const [isEditing, setIsEditing] = useState(false)
   const [scoreHome, setScoreHome] = useState(initialHome)
   const [scoreAway, setScoreAway] = useState(initialAway)
@@ -22,7 +24,8 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
     startTransition(async () => {
       setError('')
       try {
-        await updateMatchScore(matchId, scoreHome, scoreAway)
+        if (scoreHome < assigned) throw new Error(`Hay ${assigned} goles registrados. Quita primero los sobrantes antes de bajar el marcador.`)
+        unwrapResult(await updateMatchScore(matchId, scoreHome, scoreAway))
         setIsEditing(false)
       } catch (error) { setError(error instanceof Error ? error.message : 'No se pudo guardar el marcador') }
     })
@@ -41,7 +44,7 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
           <input
             type="number"
             aria-label="Goles de nosotros"
-            min="0"
+            min={assigned}
             value={scoreHome}
             onChange={(e) => setScoreHome(parseInt(e.target.value) || 0)}
             className="field-input h-9 w-10 px-0 text-center font-bold"
@@ -75,6 +78,7 @@ export default function ScoreEditor({ matchId, initialHome, initialAway, isWin, 
           </button>
         </div>
         {error && <p role="alert" className="text-xs text-banner">{error}</p>}
+        <p className="text-xs text-muted-foreground">{assigned} goles registrados</p>
       </div>
     )
   }

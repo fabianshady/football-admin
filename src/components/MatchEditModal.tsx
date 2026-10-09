@@ -7,23 +7,23 @@ import { utcToVenueDateInput, utcToVenueTimeInput, venueWallclockToUtcIso } from
 import type { Season } from '@/app/actions/seasons'
 import MatchScheduleFields from './MatchScheduleFields'
 import type { Team, KickoffSlot } from '@/lib/club'
-
-type Player = {
-  id: string
-  name: string
-  dorsal: number
-  positions: string[]
-}
+import type { Tables } from '@/lib/database.types'
+import { errorMessage, type AdminMatch, type AdminPlayer } from '@/lib/phase2'
+import RivalFields from './RivalFields'
+import SquadPicker from './SquadPicker'
+import { unwrapResult } from '@/lib/actionResult'
 
 type Props = {
-  match: any
-  players: Player[]
+  match: AdminMatch
+  players: AdminPlayer[]
+  rivals: Tables<'rival'>[]
   seasons: Season[]
   teams: Team[]
   slots: KickoffSlot[]
 }
 
-export default function MatchEditModal({ match, players, seasons, teams, slots }: Props) {
+export default function MatchEditModal({ match, players, rivals, seasons, teams, slots }: Props) {
+  const [teamId, setTeamId] = useState(match.teamId)
   const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -35,7 +35,7 @@ export default function MatchEditModal({ match, players, seasons, teams, slots }
   const initialDateStr = utcToVenueDateInput(match.date)
   const initialTimeStr = utcToVenueTimeInput(match.date)
 
-  const initialSelectedPlayers = match.squad?.map((s: any) => s.playerId || s.player?.id) || []
+  const initialSelectedPlayers = match.squad.map(s => s.playerId)
   const initialKit = match.kit || 1
 
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelectedPlayers)
@@ -65,10 +65,10 @@ export default function MatchEditModal({ match, players, seasons, teams, slots }
         formData.set('date', dateValue === initialDateStr && timeValue === initialTimeStr
           ? new Date(match.date).toISOString()
           : venueWallclockToUtcIso(dateValue, timeValue))
-        await updateMatch(formData)
+        unwrapResult(await updateMatch(formData))
         setIsOpen(false)
-      } catch (e: any) {
-        setError(e?.message || 'Error al actualizar')
+      } catch (e) {
+        setError(errorMessage(e, 'Error al actualizar'))
       }
     })
   }
@@ -79,10 +79,12 @@ export default function MatchEditModal({ match, players, seasons, teams, slots }
         onClick={() => {
           setSelectedPlayers(initialSelectedPlayers)
           setSelectedKit(initialKit)
+          setTeamId(match.teamId)
           setError(null)
           setIsOpen(true)
         }}
-        className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-gold/15 hover:text-gold"
+        aria-label="Editar detalles del partido"
+        className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-gold/15 hover:text-gold"
         title="Editar detalles del partido"
       >
         ✎
@@ -110,11 +112,8 @@ export default function MatchEditModal({ match, players, seasons, teams, slots }
 
         <form action={handleSubmit} className="space-y-5 p-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <MatchScheduleFields teams={teams} slots={slots} pending={isPending} teamId={match.teamId} date={initialDateStr} time={initialTimeStr} override={match.schedule_override} />
-            <div>
-              <label className="field-label">Rival</label>
-              <input name="rivalTeam" type="text" defaultValue={match.rivalTeam} required disabled={isPending} className="field-input" />
-            </div>
+            <MatchScheduleFields teams={teams} slots={slots} pending={isPending} teamId={match.teamId} date={initialDateStr} time={initialTimeStr} override={match.schedule_override} onTeamChange={setTeamId} />
+            <RivalFields rivals={rivals} rivalId={match.rivalId} pending={isPending} />
             <div className="sm:col-span-2">
               <label className="field-label">Ubicación</label>
               <input name="location" type="text" defaultValue={match.location} required disabled={isPending} className="field-input" />
@@ -181,37 +180,7 @@ export default function MatchEditModal({ match, players, seasons, teams, slots }
             </div>
           </div>
 
-          <div className="border-t border-border/50 pt-4">
-            <div className="mb-3 flex items-center gap-2">
-              <label className="field-label mb-0">Convocatoria</label>
-              {selectedPlayers.length > 0 && (
-                <span className="rounded-full bg-navy px-2 py-0.5 text-[10px] font-bold text-navy-foreground dark:bg-gold dark:text-navy">
-                  {selectedPlayers.length} seleccionados
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {players.map(player => (
-                <button
-                  key={player.id}
-                type="button"
-                onClick={() => togglePlayer(player.id)}
-                aria-pressed={selectedPlayers.includes(player.id)}
-                disabled={isPending}
-                  className={`group rounded-xl p-2.5 text-left text-xs transition-all ${
-                    selectedPlayers.includes(player.id)
-                      ? 'bg-navy text-navy-foreground shadow-md dark:bg-gold dark:text-navy'
-                      : 'bg-muted/60 text-foreground hover:bg-muted'
-                  }`}
-                >
-                  <span className={`block text-xs font-black ${selectedPlayers.includes(player.id) ? 'opacity-70' : 'text-muted-foreground'}`}>
-                    #{player.dorsal}
-                  </span>
-                  <span className="block truncate font-semibold">{player.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <SquadPicker players={players} retained={match.squad.flatMap(item => item.player ? [item.player] : [])} teamId={teamId} selected={selectedPlayers} onToggle={togglePlayer} pending={isPending} />
 
           {error && (
             <p role="alert" className="text-sm font-medium text-banner">{error}</p>
