@@ -3,43 +3,48 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import Image from 'next/image'
 import { updateMatch } from '@/app/actions/matches'
-import { utcToVenueDateInput, utcToVenueTimeInput, venueWallclockToUtcIso } from '@/lib/dateUtils'
-import type { Season } from '@/app/actions/seasons'
+import { utcToVenueDateInput, utcToVenueTimeInput } from '@/lib/dateUtils'
+import type { Season } from '@/lib/data/seasons'
+import { resolveKickoffIso, type MatchEditData } from '@/lib/matchEdit'
 import MatchScheduleFields from './MatchScheduleFields'
 import type { Team, KickoffSlot } from '@/lib/club'
 import type { Tables } from '@/lib/database.types'
-import { errorMessage, type AdminMatch, type AdminPlayer } from '@/lib/phase2'
+import { errorMessage, type ActivePlayer } from '@/lib/phase2'
 import RivalFields from './RivalFields'
 import SquadPicker from './SquadPicker'
 import { unwrapResult } from '@/lib/actionResult'
 
-type Props = {
-  match: AdminMatch
-  players: AdminPlayer[]
+export type MatchEditCatalog = {
+  players: ActivePlayer[]
   rivals: Tables<'rival'>[]
   seasons: Season[]
   teams: Team[]
   slots: KickoffSlot[]
 }
 
-export default function MatchEditModal({ match, players, rivals, seasons, teams, slots }: Props) {
+type Props = {
+  match: MatchEditData
+  catalog: MatchEditCatalog
+  onClose: () => void
+}
+
+export default function MatchEditModal({ match, catalog, onClose }: Props) {
+  const { players, rivals, seasons, teams, slots } = catalog
   const [teamId, setTeamId] = useState(match.teamId)
-  const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const dialogRef = useRef<HTMLDialogElement>(null)
   useEffect(() => {
-    if (isOpen) dialogRef.current?.showModal()
-  }, [isOpen])
+    const dialog = dialogRef.current
+    if (dialog && !dialog.open) dialog.showModal()
+  }, [])
+  const close = () => dialogRef.current?.close()
 
   const initialDateStr = utcToVenueDateInput(match.date)
   const initialTimeStr = utcToVenueTimeInput(match.date)
 
-  const initialSelectedPlayers = match.squad.map(s => s.playerId)
-  const initialKit = match.kit || 1
-
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelectedPlayers)
-  const [selectedKit, setSelectedKit] = useState<number>(initialKit)
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>(match.squadIds)
+  const [selectedKit, setSelectedKit] = useState<number>(match.kit)
 
   const togglePlayer = (playerId: string) => {
     setSelectedPlayers(prev =>
@@ -60,40 +65,17 @@ export default function MatchEditModal({ match, players, rivals, seasons, teams,
 
     startTransition(async () => {
       try {
-        // Keep the exact stored instant when the operator did not change kickoff.
-        // This also preserves seconds and the chosen side of an autumn DST overlap.
-        formData.set('date', dateValue === initialDateStr && timeValue === initialTimeStr
-          ? new Date(match.date).toISOString()
-          : venueWallclockToUtcIso(dateValue, timeValue))
+        formData.set('date', resolveKickoffIso(match.date, dateValue, timeValue))
         unwrapResult(await updateMatch(formData))
-        setIsOpen(false)
+        close()
       } catch (e) {
         setError(errorMessage(e, 'Error al actualizar'))
       }
     })
   }
 
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => {
-          setSelectedPlayers(initialSelectedPlayers)
-          setSelectedKit(initialKit)
-          setTeamId(match.teamId)
-          setError(null)
-          setIsOpen(true)
-        }}
-        aria-label="Editar detalles del partido"
-        className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground transition-all hover:bg-gold/15 hover:text-gold"
-        title="Editar detalles del partido"
-      >
-        ✎
-      </button>
-    )
-  }
-
   return (
-    <dialog ref={dialogRef} onCancel={() => setIsOpen(false)} aria-labelledby="match-edit-title" className="m-auto w-[calc(100%-2rem)] max-w-3xl rounded-3xl bg-card p-0 text-foreground backdrop:bg-black/50">
+    <dialog ref={dialogRef} onClose={onClose} aria-labelledby="match-edit-title" className="m-auto w-[calc(100%-2rem)] max-w-3xl rounded-3xl bg-card p-0 text-foreground backdrop:bg-black/50">
       <div className="glass-card max-h-[90vh] w-full overflow-y-auto rounded-3xl shadow-xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 bg-card/90 px-5 py-4 backdrop-blur">
           <h2 id="match-edit-title" className="flex items-center gap-2 font-display font-bold tracking-wide text-foreground">
@@ -103,7 +85,7 @@ export default function MatchEditModal({ match, players, rivals, seasons, teams,
           <button
             type="button"
             aria-label="Cerrar edición de partido"
-            onClick={() => setIsOpen(false)}
+            onClick={() => close()}
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             ✕
@@ -180,7 +162,7 @@ export default function MatchEditModal({ match, players, rivals, seasons, teams,
             </div>
           </div>
 
-          <SquadPicker players={players} retained={match.squad.flatMap(item => item.player ? [item.player] : [])} teamId={teamId} selected={selectedPlayers} onToggle={togglePlayer} pending={isPending} />
+          <SquadPicker players={players} retained={match.retained} teamId={teamId} selected={selectedPlayers} onToggle={togglePlayer} pending={isPending} />
 
           {error && (
             <p role="alert" className="text-sm font-medium text-banner">{error}</p>
@@ -190,7 +172,7 @@ export default function MatchEditModal({ match, players, rivals, seasons, teams,
             <button type="submit" disabled={isPending} className="btn-primary">
               {isPending ? 'Guardando…' : 'Guardar Cambios'}
             </button>
-            <button type="button" onClick={() => setIsOpen(false)} disabled={isPending} className="btn-ghost">
+            <button type="button" onClick={() => close()} disabled={isPending} className="btn-ghost">
               Cancelar
             </button>
           </div>

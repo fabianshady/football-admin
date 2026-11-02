@@ -2,13 +2,17 @@ import MobileMenuButton from "@/components/MobileMenuButton";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { requireAdmin } from '@/lib/admin';
 import { redirect } from 'next/navigation';
+import { AdminAccessError } from '@/lib/adminIdentity';
 
 export default async function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    try { await requireAdmin(); } catch { redirect('/login?error=' + encodeURIComponent('Se requiere una cuenta de administrador')); }
+    try { await requireAdmin(); } catch (error) {
+        if (error instanceof AdminAccessError) redirect('/login?error=' + encodeURIComponent(error.message));
+        throw error;
+    }
     return (
         <div className="flex min-h-screen">
             <a href="#main-content" className="skip-link">Saltar al contenido</a>

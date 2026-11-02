@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { getTopScorers, getMatchesWithGoals } from '@/app/actions/goals'
-import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
+import { getTopScorers, getMatchesWithGoals } from '@/lib/data/goals'
+import { getSeasons, resolveSeasonFromList } from '@/lib/data/seasons'
 import GoalLogger from '@/components/GoalLogger'
 import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
@@ -12,9 +12,8 @@ type Props = {
 export default async function GoalsPage({ searchParams }: Props) {
   const params = await searchParams
   const seasons = await getSeasons()
-  const seasonId = await resolveSeasonId(params.season)
-  const topScorers = await getTopScorers(seasonId)
-  const matches = await getMatchesWithGoals(seasonId)
+  const seasonId = resolveSeasonFromList(seasons, params.season)
+  const [topScorers, matches] = await Promise.all([getTopScorers(seasonId), getMatchesWithGoals(seasonId)])
   const currentSeason = seasons.find(s => s.id === seasonId)
 
   const first = topScorers[0] || null

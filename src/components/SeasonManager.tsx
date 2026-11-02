@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { saveSeason, toggleSeasonActive, deleteSeason, type Season } from '@/app/actions/seasons'
+import { saveSeason, toggleSeasonActive, deleteSeason } from '@/app/actions/seasons'
+import type { Season } from '@/lib/data/seasons'
 import { formatCalendarDate, toCalendarInput } from '@/lib/dateUtils'
+import { errorMessage } from '@/lib/phase2'
 
 export default function SeasonManager({ seasons }: { seasons: Season[] }) {
   const [showForm, setShowForm] = useState(false)
@@ -39,8 +41,8 @@ export default function SeasonManager({ seasons }: { seasons: Season[] }) {
       try {
         await saveSeason(formData)
         closeForm()
-      } catch (e: any) {
-        setError(e?.message || 'Error al guardar')
+      } catch (e) {
+        setError(errorMessage(e, 'Error al guardar'))
       }
     })
   }
@@ -50,8 +52,8 @@ export default function SeasonManager({ seasons }: { seasons: Season[] }) {
     startTransition(async () => {
       try {
         await toggleSeasonActive(id, active)
-      } catch (e: any) {
-        setDeleteError(e?.message || 'Error al cambiar estado')
+      } catch (e) {
+        setDeleteError(errorMessage(e, 'Error al cambiar estado'))
       }
     })
   }
@@ -62,8 +64,8 @@ export default function SeasonManager({ seasons }: { seasons: Season[] }) {
     startTransition(async () => {
       try {
         await deleteSeason(id)
-      } catch (e: any) {
-        setDeleteError(e?.message || 'No se pudo eliminar')
+      } catch (e) {
+        setDeleteError(errorMessage(e, 'No se pudo eliminar'))
       }
     })
   }

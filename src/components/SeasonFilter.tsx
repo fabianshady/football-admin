@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
-import type { Season } from '@/app/actions/seasons'
+import type { Season } from '@/lib/data/seasons'
 
 type Props = {
   seasons: Season[]
