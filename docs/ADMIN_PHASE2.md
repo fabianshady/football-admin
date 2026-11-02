@@ -1,6 +1,6 @@
 # Admin phase 2 · implementation and verification
 
-Local implementation on `dev` in `app_futbol`; no commit/push. Contract and full SQL reviewed from `../football/docs/db/PHASE2_CONTRACT.md` and `../football/supabase/migrations/20261008235036_phase2_players_rivals_goals.sql`. The parent-authorized database task applied **20261008235036 / phase2_players_rivals_goals** remotely and refreshed both repos' types on 2026-10-08. No database writes were made by the admin UI task.
+Local implementation on `dev` in `app_futbol`; no commit/push. Contract and full SQL reviewed from `../football_public/docs/db/PHASE2_CONTRACT.md` and `../football_public/supabase/migrations/20261008235036_phase2_players_rivals_goals.sql`. The parent-authorized database task applied **20261008235036 / phase2_players_rivals_goals** remotely and refreshed both repos' types on 2026-10-08. No database writes were made by the admin UI task.
 
 ## Contract implementation
 
@@ -27,7 +27,7 @@ Final local evidence (2026-10-08):
 - `npm run check`: ESLint clean, Next route type generation and TypeScript passed, **15/15 tests passed**.
 - `npm run build`: production Turbopack compilation and TypeScript passed; all dashboard/admin/login/callback routes compiled. Existing nonblocking outdated Browserslist dataset notice remains.
 - `git diff --check`: passed.
-- `diff -u ../football/lib/database.types.ts src/lib/database.types.ts`: no differences; copied type contracts are byte-identical at verification time.
+- `diff -u ../football_public/lib/database.types.ts src/lib/database.types.ts`: no differences; copied type contracts are byte-identical at verification time.
 - Both local crest files have SHA-256 `2802852c557a5305b9798607ba40c2a7acdcda603fc42fbac5d05c576a2c15c8`.
 - Scoped player/match/goal code contains no `any`, and no `deletePlayer`, `updatePlayerInline` or Player DELETE call remains. Branch verified as `dev`; no commit/push or SQL was executed.
 

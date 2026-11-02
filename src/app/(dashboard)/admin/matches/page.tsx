@@ -1,16 +1,17 @@
 import { Suspense } from 'react'
 import Image from 'next/image'
-import { getMatches, getRivals } from '@/app/actions/matches'
+import { getMatches, getRivals } from '@/lib/data/matches'
 import DeleteMatchButton from '@/components/DeleteMatchButton'
-import { getActivePlayers } from '@/app/actions/players'
-import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
+import { getActivePlayers } from '@/lib/data/players'
+import { getSeasons, resolveSeasonFromList } from '@/lib/data/seasons'
 import MatchForm from '@/components/MatchForm'
 import ScoreEditor from '@/components/ScoreEditor'
-import MatchEditModal from '@/components/MatchEditModal'
+import MatchEditProvider, { MatchEditTrigger } from '@/components/MatchEditProvider'
+import { toMatchEditData } from '@/lib/matchEdit'
 import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
 import { formatVenueDateTime } from '@/lib/dateUtils'
-import { getClubData } from '@/app/actions/club'
+import { getTeams, getKickoffSlots } from '@/lib/data/club'
 
 type Props = {
   searchParams: Promise<{ season?: string }>
@@ -18,12 +19,16 @@ type Props = {
 
 export default async function MatchesPage({ searchParams }: Props) {
   const params = await searchParams
-  const seasons = await getSeasons()
-  const seasonId = await resolveSeasonId(params.season)
-  const matches = await getMatches(seasonId)
-  const activePlayers = await getActivePlayers()
-  const rivals = await getRivals()
-  const { teams, slots } = await getClubData()
+  const seasonsPromise = getSeasons()
+  const [seasons, matches, activePlayers, rivals, teams, slots] = await Promise.all([
+    seasonsPromise,
+    seasonsPromise.then(rows => getMatches(resolveSeasonFromList(rows, params.season))),
+    getActivePlayers(),
+    getRivals(),
+    getTeams(),
+    getKickoffSlots(),
+  ])
+  const seasonId = resolveSeasonFromList(seasons, params.season)
   const currentSeason = seasons.find(s => s.id === seasonId)
 
   return (
@@ -61,6 +66,10 @@ export default async function MatchesPage({ searchParams }: Props) {
             <p className="mt-1 text-sm text-muted-foreground">Registra un partido o cambia el filtro de temporada</p>
           </div>
         ) : (
+          <MatchEditProvider
+            matches={matches.map(m => toMatchEditData(m, activePlayers))}
+            catalog={{ players: activePlayers, rivals, seasons, teams, slots }}
+          >
           <AnimatedList className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {matches.map(match => {
               const isWin = match.scoreHome > match.scoreAway
@@ -117,7 +126,7 @@ export default async function MatchesPage({ searchParams }: Props) {
                         }`}>
                           {isWin ? 'VICTORIA' : isLoss ? 'DERROTA' : 'EMPATE'}
                         </span>
-                         <MatchEditModal match={match} players={activePlayers} rivals={rivals} seasons={seasons} teams={teams} slots={slots} />
+                         <MatchEditTrigger matchId={match.id} />
                         <DeleteMatchButton id={match.id} rival={match.rival?.name ?? match.rivalTeam} />
                       </div>
                     </div>
@@ -181,6 +190,7 @@ export default async function MatchesPage({ searchParams }: Props) {
               )
             })}
           </AnimatedList>
+          </MatchEditProvider>
         )}
       </div>
     </AnimatedPage>

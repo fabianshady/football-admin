@@ -1,6 +1,6 @@
 # ITJAGUARS FC · Administración
 
-Aplicación en español para gestionar jugadores, temporadas, partidos, convocatorias, goles, aportaciones y datos del club. Este repositorio (`football-admin`, carpeta local `app_futbol`) administra el mismo proyecto Supabase que el [sitio público `football`](https://github.com/fabianshady/football).
+Aplicación en español para gestionar jugadores, temporadas, partidos, convocatorias, goles, aportaciones y datos del club. Este repositorio (`football-admin`, carpeta local `app_futbol`) administra el mismo proyecto Supabase que el [sitio público](https://github.com/fabianshady/football) (remoto `football`, carpeta local `../football_public`).
 
 ## Requisitos y arranque
 
@@ -31,7 +31,7 @@ Las variables `NEXT_PUBLIC_` quedan incorporadas al bundle durante la build. Con
 
 El acceso es mediante email y contraseña en `/login`. La cuenta debe existir en Supabase Auth y estar autorizada en la membresía privada de administradores. Crear una cuenta Auth por sí solo no concede acceso. Un responsable de la base de datos gestiona esa membresía mediante un procedimiento privilegiado; la aplicación nunca lee directamente `private.admin_users`.
 
-`requireAdmin()` verifica `getUser()` y el resultado de `is_admin()`. El proxy, layout, login, callback y acciones de dominio comprueban el rol. Una sesión sin autorización no puede entrar al panel ni escribir mediante las RPCs. Si se utiliza `/auth/callback`, configurar su URL local/Preview/producción en las URLs de redirección permitidas de Supabase Auth.
+`requireAdmin()` verifica el usuario con `getUser()` y el rol mediante `is_admin()`. React `cache` comparte esa verificación y su cliente únicamente dentro de la misma petición de servidor; no hay caché global de sesiones ni datos privados. El proxy refresca/verifica el token con `getClaims()`; el layout, las lecturas y cada acción de escritura siguen exigiendo usuario vigente y rol de administrador. En proyectos con firma JWT simétrica, `getClaims()` también consulta Auth; no se presupone validación local. Si se utiliza `/auth/callback`, configurar su URL local/Preview/producción en las URLs de redirección permitidas de Supabase Auth.
 
 | Ruta | Gestión |
 | --- | --- |
@@ -45,22 +45,27 @@ El acceso es mediante email y contraseña en `/login`. La cuenta debe existir en
 
 ## Arquitectura
 
-- Next.js 16.1.6 App Router, React 19 y TypeScript.
+- Next.js 16.4.4 App Router, React 19 y TypeScript.
+- Next/eslint-config-next están fijados a 16.4.4 y Sharp resuelve a 0.35.5. `npm audit --omit=dev` devuelve 0; la auditoría completa conserva 16 avisos moderados solo de desarrollo (ver el registro). Se esperan 0 en producción y 0 altos/críticos en el árbol completo. Ver [el registro compartido de seguridad](https://github.com/fabianshady/football/blob/dev/docs/SECURITY_UPDATE.md) (local: `../football_public/docs/SECURITY_UPDATE.md`).
 - `src/app/(auth)`: login; `src/app/(dashboard)`: páginas protegidas.
-- `src/app/actions`: acciones de servidor con autorización y validación.
+- `src/app/actions`: únicamente mutaciones de servidor con autorización, validación e invalidación de rutas afectadas.
+- `src/lib/data`: lecturas `server-only`, con autorización y deduplicación por petición; las páginas ejecutan consultas independientes en paralelo.
+- `src/lib/pure`: consultas de columnas explícitas, paginación interna, agregados y selección de temporada verificables sin sesión real.
 - `src/lib/supabase/{client,server,proxy}.ts`: clientes tipados con `Database`, sesiones SSR y cookies.
 - `src/lib/admin.ts`: comprobación central del administrador.
 - `src/lib/validation.ts`: validación de formularios y contrato de las RPCs.
 - `src/lib/dateUtils.ts`: conversiones entre calendario de Tijuana e instantes UTC.
-- `src/lib/database.types.ts`: baseline generado con contratos fase 2 preparados del esquema compartido; regenerar tras la migración coordinada.
+- `src/lib/database.types.ts`: tipos del esquema compartido aplicado; regenerar cuando cambie el esquema.
 - `src/components`: formularios, diálogos, controles de pagos y navegación.
 - `src/app/styles/tokens.css` y `src/app/globals.css`: tokens y Tailwind CSS 4.
 
 La identidad visual comparte navy `#1B2A4A`, dorado y modos claro/oscuro/sistema con el sitio público. Los helpers de tema y tokens viven en cada repositorio para permitir despliegues independientes. La preferencia usa `itj-theme`; el script inicial aplica el tema antes del primer render.
 
+Partidos envía un único catálogo de edición y monta el diálogo solo al abrirlo, con carga diferida de su JavaScript. Cada sección tiene un esqueleto de carga; el contenido ya no espera animaciones escalonadas de `framer-motion`. La matriz de pagos consulta solo la temporada elegida y los goleadores usan `v_player_stats`. No se requieren nuevas migraciones para estas optimizaciones. Ver [mediciones y pruebas de rendimiento](docs/PERFORMANCE.md).
+
 ## Contrato de base de datos
 
-La fuente de migraciones es `../football/supabase/migrations/`. **`20261007024919_club_contract.sql`** (`club_contract`) fue aplicada el **7 de octubre de 2026, 02:49:19 UTC**. El arranque y las builds no ejecutan migraciones; no se utiliza Prisma.
+La fuente de migraciones es `../football_public/supabase/migrations/`. **`20261007024919_club_contract.sql`** (`club_contract`) fue aplicada el **7 de octubre de 2026, 02:49:19 UTC**. El arranque y las builds no ejecutan migraciones; no se utiliza Prisma.
 
 - `team` y `kickoff_slot`: equipos, día local permitido y horarios autorizados.
 - `club_settings`: singleton `id=1` para contacto y transferencia públicos.
@@ -74,7 +79,7 @@ Las RPCs son invoker, requieren administrador y respetan RLS. Los pagos detectan
 
 ### Fase 2 (base de datos aplicada)
 
-Esta versión utiliza `20261008235036_phase2_players_rivals_goals.sql`, ya aplicada en Supabase, y `20261009032355_merge_confirmed_rival_aliases.sql`, que unifica los tres pares de rivales confirmados. Los tipos de ambos proyectos están actualizados. El contrato exacto está en `../football/docs/db/PHASE2_CONTRACT.md`. La app no ejecuta migraciones ni adapta consultas a esquemas incompletos.
+Esta versión utiliza `20261008235036_phase2_players_rivals_goals.sql`, ya aplicada en Supabase, y `20261009032355_merge_confirmed_rival_aliases.sql`, que unifica los tres pares de rivales confirmados. Los tipos de ambos proyectos están actualizados. El contrato exacto está en `../football_public/docs/db/PHASE2_CONTRACT.md`. La app no ejecuta migraciones ni adapta consultas a esquemas incompletos.
 
 - Plantilla: nombre existente, apodo opcional, principal `GK CB WB DM CM AM W ST`, secundarias, lado `L R C ANY`, pie opcional `L R BOTH`, equipos actuales y estado. WB tiene grupo explícito **Carrileros** (bandas de defensa/medio). No se inventan nombres completos ni se envía el campo legacy `positions` desde los formularios.
 - `save_player(p_player jsonb,p_team_ids text[] DEFAULT NULL) → text` guarda jugador y afiliaciones atómicamente; null conserva equipos, `[]` los borra. Dorsal 1–99, único entre activos; sugerencias y conflictos visibles. Desactivar conserva el historial; no existe acción de eliminar jugador.
@@ -109,6 +114,9 @@ npm run build
 | `npm run typecheck` | TypeScript sin escribir metadatos incrementales. |
 | `npm test` | Tests de Node mediante `tsx`, en `tests/*.test.ts`. |
 | `npm run check` | Lint, tipos y tests. |
+| `npm audit --omit=dev` | Auditoría de producción; esperado 0 vulnerabilidades. |
+| `npm audit --audit-level=high` | Sale con 0 pero imprime 16 avisos moderados. |
+| `npm audit` | Sale con 1 hoy (avisos moderados de desarrollo); no se ignora. |
 | `npm run build` | Compilación de producción standalone. |
 | `npm run start` | Servir una compilación local. |
 
@@ -141,7 +149,7 @@ La imagen publicada en GHCR recibe los argumentos desde los secrets de GitHub `N
 
 - [Contratos de administración y verificación](docs/ADMIN_ADAPTATION.md).
 - [Estado de la migración compartida](docs/db/MIGRATION_HANDOFF.md).
-- [SQL, permisos, verificación y rollback](https://github.com/fabianshady/football/blob/dev/docs/db/MIGRATION_NOTES.md) (local: `../football/docs/db/MIGRATION_NOTES.md`).
-- [Sistema visual público compartido](https://github.com/fabianshady/football/blob/dev/docs/design/DESIGN.md) (local: `../football/docs/design/DESIGN.md`).
+- [SQL, permisos, verificación y rollback](https://github.com/fabianshady/football/blob/dev/docs/db/MIGRATION_NOTES.md) (local: `../football_public/docs/db/MIGRATION_NOTES.md`).
+- [Sistema visual público compartido](https://github.com/fabianshady/football/blob/dev/docs/design/DESIGN.md) (local: `../football_public/docs/design/DESIGN.md`).
 
 Repositorio privado mantenido por [fabianshady](https://github.com/fabianshady), sin licencia declarada.

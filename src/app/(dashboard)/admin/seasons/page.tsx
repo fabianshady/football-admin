@@ -1,4 +1,4 @@
-import { getSeasons } from '@/app/actions/seasons'
+import { getSeasons } from '@/lib/data/seasons'
 import SeasonManager from '@/components/SeasonManager'
 import { AnimatedPage } from '@/components/AnimatedContainer'
 

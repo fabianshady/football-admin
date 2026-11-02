@@ -1,7 +1,8 @@
 import { Suspense } from 'react'
-import { getPaymentMatrix, deleteEvent } from '@/app/actions/payments'
+import { deleteEvent } from '@/app/actions/payments'
+import { getPaymentMatrix } from '@/lib/data/payments'
 import PaymentToggle from '@/components/PaymentToggle'
-import { getSeasons, resolveSeasonId } from '@/app/actions/seasons'
+import { getSeasons, resolveSeasonFromList } from '@/lib/data/seasons'
 import EventForm from '@/components/EventForm'
 import SeasonFilter from '@/components/SeasonFilter'
 import { AnimatedPage, AnimatedList, AnimatedItem } from '@/components/AnimatedContainer'
@@ -14,27 +15,15 @@ type Props = {
 export default async function PaymentsPage({ searchParams }: Props) {
   const params = await searchParams
   const seasons = await getSeasons()
-  const seasonId = await resolveSeasonId(params.season)
+  const seasonId = resolveSeasonFromList(seasons, params.season)
   const { events, players } = await getPaymentMatrix(seasonId)
-  const activePlayers = players.filter((p: any) => p.active)
+  const activePlayers = players.filter(p => p.active)
 
-  const totalDebt = activePlayers.reduce((acc: number, player: any) => {
-    return acc + player.payments
-      .filter((p: any) => !p.paid)
-      .reduce((sum: number, curr: any) => {
-        const event = events.find((e: any) => e.id === curr.eventId)
-        return sum + (event ? event.cost : 0)
-      }, 0)
-  }, 0)
-
-  const totalPaid = activePlayers.reduce((acc: number, player: any) => {
-    return acc + player.payments
-      .filter((p: any) => p.paid)
-      .reduce((sum: number, curr: any) => {
-        const event = events.find((e: any) => e.id === curr.eventId)
-        return sum + (event ? event.cost : 0)
-      }, 0)
-  }, 0)
+  const costById = new Map(events.map(event => [event.id, event.cost]))
+  const owed = (payments: { eventId: string; paid: boolean }[], paid: boolean) =>
+    payments.reduce((sum, payment) => sum + (payment.paid === paid ? costById.get(payment.eventId) ?? 0 : 0), 0)
+  const totalDebt = activePlayers.reduce((acc, player) => acc + owed(player.payments, false), 0)
+  const totalPaid = activePlayers.reduce((acc, player) => acc + owed(player.payments, true), 0)
 
   const collectionRate = totalDebt + totalPaid > 0
     ? Math.round((totalPaid / (totalDebt + totalPaid)) * 100)
@@ -101,7 +90,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 <th className="w-28 bg-secondary px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-banner">
                   Deuda
                 </th>
-                {events.map((event: any) => (
+                {events.map((event) => (
                   <th key={event.id} className="group relative min-w-[110px] border-l border-white/10 px-3 py-3.5 text-center">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-bold text-gold">${event.cost}</span>
@@ -118,13 +107,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {activePlayers.map((player: any) => {
-                const playerDebt = player.payments
-                  .filter((p: any) => !p.paid)
-                  .reduce((acc: number, curr: any) => {
-                    const event = events.find((e: any) => e.id === curr.eventId)
-                    return acc + (event ? event.cost : 0)
-                  }, 0)
+              {activePlayers.map((player) => {
+                const playerDebt = owed(player.payments, false)
 
                 return (
                   <tr key={player.id} className="transition-colors hover:bg-muted/40">
@@ -137,8 +121,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         ${playerDebt.toFixed(0)}
                       </span>
                     </td>
-                    {events.map((event: any) => {
-                      const payment = player.payments.find((p: any) => p.eventId === event.id)
+                    {events.map((event) => {
+                      const payment = player.payments.find((p) => p.eventId === event.id)
                       if (!payment) return (
                         <td key={event.id} className="border-l border-border/30 p-2 text-center">
                           <span className="text-xs text-muted-foreground">—</span>

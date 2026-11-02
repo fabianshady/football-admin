@@ -1,4 +1,4 @@
-import { getClubData } from '@/app/actions/club'
+import { getClubData } from '@/lib/data/club'
 import ClubSettingsForm from '@/components/ClubSettingsForm'
 import { WEEKDAYS } from '@/lib/club'
 

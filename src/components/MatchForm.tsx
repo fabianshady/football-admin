@@ -4,17 +4,17 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { createMatch } from '@/app/actions/matches'
 import { venueWallclockToUtcIso } from '@/lib/dateUtils'
-import type { Season } from '@/app/actions/seasons'
+import type { Season } from '@/lib/data/seasons'
 import MatchScheduleFields from './MatchScheduleFields'
 import type { Team, KickoffSlot } from '@/lib/club'
 import type { Tables } from '@/lib/database.types'
-import { errorMessage, type AdminPlayer } from '@/lib/phase2'
+import { errorMessage, type ActivePlayer } from '@/lib/phase2'
 import RivalFields from './RivalFields'
 import SquadPicker from './SquadPicker'
 import { unwrapResult } from '@/lib/actionResult'
 
 type Props = {
-  players: AdminPlayer[]
+  players: ActivePlayer[]
   rivals: Tables<'rival'>[]
   seasons: Season[]
   teams: Team[]

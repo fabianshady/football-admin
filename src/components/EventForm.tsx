@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react'
 import { createEvent } from '@/app/actions/payments'
 import { calendarDateToIso } from '@/lib/dateUtils'
-import type { Season } from '@/app/actions/seasons'
+import type { Season } from '@/lib/data/seasons'
+import { errorMessage } from '@/lib/phase2'
 
 type Props = {
   seasons: Season[]
@@ -24,8 +25,8 @@ export default function EventForm({ seasons, defaultSeasonId }: Props) {
         await createEvent(formData)
         const form = document.getElementById('event-form') as HTMLFormElement | null
         form?.reset()
-      } catch (e: any) {
-        setError(e?.message || 'Error al crear el cobro')
+      } catch (e) {
+        setError(errorMessage(e, 'Error al crear el cobro'))
       }
     })
   }

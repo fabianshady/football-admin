@@ -3,45 +3,8 @@
 import { requireAdmin } from '@/lib/admin'
 import { requiredText } from '@/lib/validation'
 import { validateCalendarDate } from '@/lib/dateUtils'
+export type { Season } from '@/lib/pure/seasons'
 import { revalidatePath } from 'next/cache'
-
-export type Season = {
-  id: string
-  name: string
-  startdate: string
-  enddate: string
-  active: boolean
-}
-
-export async function getSeasons(): Promise<Season[]> {
-  const supabase = await requireAdmin()
-  const { data, error } = await supabase
-    .from('season')
-    .select('*')
-    .order('startdate', { ascending: false })
-  if (error) throw new Error(error.message)
-  return (data ?? []) as Season[]
-}
-
-export async function getActiveSeason(): Promise<Season | null> {
-  const supabase = await requireAdmin()
-  const { data, error } = await supabase
-    .from('season')
-    .select('*')
-    .eq('active', true)
-    .limit(1)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return data as Season | null
-}
-
-/** Resolve seasonId from query param or fall back to active season */
-export async function resolveSeasonId(seasonId?: string | null): Promise<string | null> {
-  await requireAdmin()
-  if (seasonId) return seasonId
-  const active = await getActiveSeason()
-  return active?.id ?? null
-}
 
 export async function saveSeason(formData: FormData) {
   const supabase = await requireAdmin()

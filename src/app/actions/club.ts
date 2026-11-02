@@ -2,19 +2,7 @@
 
 import { requireAdmin } from '@/lib/admin'
 import { nonnegativeAmount } from '@/lib/validation'
-import type { Team, KickoffSlot, ClubSettings } from '@/lib/club'
 import { revalidatePath } from 'next/cache'
-
-export async function getClubData() {
-  const supabase = await requireAdmin()
-  const [teams, slots, settings] = await Promise.all([
-    supabase.from('team').select('*').order('sort_order').order('name'),
-    supabase.from('kickoff_slot').select('time').order('time'),
-    supabase.from('club_settings').select('*').eq('id', 1).single(),
-  ])
-  for (const result of [teams, slots, settings]) if (result.error) throw new Error(result.error.message)
-  return { teams: (teams.data ?? []) as Team[], slots: (slots.data ?? []) as KickoffSlot[], settings: settings.data as ClubSettings }
-}
 
 export async function saveClubSettings(form: FormData) {
   const supabase = await requireAdmin()

@@ -1,13 +1,24 @@
 import type { Tables, PlayerPosition, PreferredSide, PlayerFoot, GoalKind } from './database.types'
 import { integer, requiredText } from './validation'
 
-export type AdminPlayer = Tables<'Player'> & { player_team: { team_id: string; team: Tables<'team'> | null }[] }
-export type AdminMatch = Tables<'Match'> & {
-  team: Tables<'team'> | null
-  rival: Tables<'rival'> | null
-  season: Tables<'season'> | null
-  squad: (Tables<'MatchSquad'> & { player: Tables<'Player'> | null })[]
-  goals: (Tables<'Goal'> & { player: Tables<'Player'> | null })[]
+type PlayerCore = Pick<Tables<'Player'>, 'id' | 'name' | 'dorsal' | 'active' | 'primary_position'>
+/** Minimal player used by squad pickers (active roster query). */
+export type ActivePlayer = PlayerCore & { player_team: { team_id: string }[] }
+/** Roster row: canonical profile fields; legacy columns are optional and never required by the UI. */
+export type AdminPlayer = PlayerCore & Pick<Tables<'Player'>, 'nickname' | 'foot' | 'preferred_side' | 'secondary_positions'> & {
+  createdAt?: string
+  positions?: string[] | null
+  player_team: { team_id: string; team?: Pick<Tables<'team'>, 'id' | 'name'> | null }[]
+}
+export type MatchPlayerRef = Pick<Tables<'Player'>, 'id' | 'name'>
+export type SquadPlayer = PlayerCore
+/** Match row as returned by the admin queries (reduced joins). */
+export type AdminMatch = Pick<Tables<'Match'>, 'id' | 'date' | 'kit' | 'location' | 'myPos' | 'myTeam' | 'rivalId' | 'rivalPos' | 'rivalTeam' | 'schedule_override' | 'scoreAway' | 'scoreHome' | 'seasonid' | 'teamId'> & {
+  team: Pick<Tables<'team'>, 'id' | 'name'> | null
+  rival: Pick<Tables<'rival'>, 'id' | 'name'> | null
+  season: Pick<Tables<'season'>, 'id' | 'name'> | null
+  squad: (Pick<Tables<'MatchSquad'>, 'id' | 'matchId' | 'playerId'> & { player: SquadPlayer | null })[]
+  goals: (Pick<Tables<'Goal'>, 'id' | 'matchId' | 'kind' | 'minute' | 'playerId'> & { player: MatchPlayerRef | null })[]
 }
 export const POSITIONS: Record<PlayerPosition, string> = {
   GK: 'Portero', CB: 'Central', WB: 'Carrilero', DM: 'Mediocentro defensivo',
@@ -76,9 +87,9 @@ export function goalLabel(goal: Pick<Tables<'Goal'>, 'kind' | 'playerId'>, playe
   return goal.kind === 'player' ? players.find(p => p.id === goal.playerId)?.name ?? 'Jugador registrado' : GOAL_LABELS[goal.kind]
 }
 export function normalizeRivalName(name: string) { return name.trim().replace(/\s+/g, ' ').toLowerCase() }
-export function squadChoices(players: AdminPlayer[], retained: Tables<'Player'>[], teamId: string, selected: string[], onlyTeam: boolean) {
-  const choices: AdminPlayer[] = [...players, ...retained.filter(player => !players.some(item => item.id === player.id)).map(player => ({ ...player, player_team: [] }))]
-  const isMember = (player: AdminPlayer) => player.player_team.some(item => item.team_id === teamId)
+export function squadChoices(players: ActivePlayer[], retained: SquadPlayer[], teamId: string, selected: string[], onlyTeam: boolean) {
+  const choices: ActivePlayer[] = [...players, ...retained.filter(player => !players.some(item => item.id === player.id)).map(player => ({ ...player, player_team: [] }))]
+  const isMember = (player: ActivePlayer) => player.player_team.some(item => item.team_id === teamId)
   return {
     visible: choices.filter(player => !onlyTeam || isMember(player) || selected.includes(player.id)),
     crossTeam: choices.filter(player => selected.includes(player.id) && !isMember(player)),

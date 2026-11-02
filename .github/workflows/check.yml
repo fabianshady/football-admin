@@ -13,6 +13,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+      - name: Audit high and critical issues in all dependencies
+        run: npm audit --audit-level=high
       - run: npm run check
       - run: npm run build
         env:

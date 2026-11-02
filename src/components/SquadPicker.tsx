@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { POSITIONS, squadChoices, type AdminPlayer } from '@/lib/phase2'
-import type { Tables } from '@/lib/database.types'
+import { POSITIONS, squadChoices, type ActivePlayer, type SquadPlayer } from '@/lib/phase2'
 
 export default function SquadPicker({ players, retained = [], teamId, selected, onToggle, pending }: {
-  players: AdminPlayer[]; retained?: Tables<'Player'>[]; teamId: string; selected: string[]; onToggle: (id: string) => void; pending: boolean
+  players: ActivePlayer[]; retained?: SquadPlayer[]; teamId: string; selected: string[]; onToggle: (id: string) => void; pending: boolean
 }) {
   const [onlyTeam, setOnlyTeam] = useState(true)
   const { crossTeam, visible } = squadChoices(players, retained, teamId, selected, onlyTeam)

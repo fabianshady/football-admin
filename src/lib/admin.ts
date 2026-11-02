@@ -1,9 +1,10 @@
 import 'server-only'
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { assertAuthenticated, assertAdminRole } from './adminIdentity'
 
-/** Every action verifies identity and role; the authenticated client also enforces RLS. */
-export async function requireAdmin() {
+/** Deduplicated within one server render/action only. Never cache sessions across requests. */
+export const requireAdmin = cache(async () => {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   assertAuthenticated(user, Boolean(authError))
@@ -11,4 +12,4 @@ export async function requireAdmin() {
   if (error) throw new Error(error.message)
   assertAdminRole(data)
   return supabase
-}
+})

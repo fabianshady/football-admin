@@ -1,44 +1,8 @@
 'use server'
 
-import { cache } from 'react'
 import { requireAdmin } from '@/lib/admin'
 import { nonnegativeAmount, requiredText, utcInstant } from '@/lib/validation'
 import { revalidatePath } from 'next/cache'
-
-// 1. Obtener la data para la matriz, cacheamos para deduplicar peticiones en SSR/RSC
-export const getPaymentMatrix = cache(async (seasonId?: string | null) => {
-  const supabase = await requireAdmin()
-
-  let eventsQuery = supabase
-    .from('Event')
-    .select('*, payments:Payment(*), season:season(*)')
-    .order('date', { ascending: false })
-
-  if (seasonId) {
-    eventsQuery = eventsQuery.eq('seasonid', seasonId)
-  }
-
-  const [eventsResult, playersResult] = await Promise.all([
-    eventsQuery,
-    supabase.from('Player').select('*, payments:Payment(*)').order('name', { ascending: true }),
-  ])
-
-  if (eventsResult.error) throw new Error(eventsResult.error.message)
-  if (playersResult.error) throw new Error(playersResult.error.message)
-
-  const events = eventsResult.data ?? []
-  const eventIds = new Set(events.map((e: any) => e.id))
-
-  // Filter player payments to only those in the selected season's events
-  const players = (playersResult.data ?? []).map((player: any) => ({
-    ...player,
-    payments: seasonId
-      ? (player.payments ?? []).filter((p: any) => eventIds.has(p.eventId))
-      : player.payments ?? [],
-  }))
-
-  return { events, players }
-})
 
 // 2. Crear Evento y endeudar a todos los activos
 export async function createEvent(formData: FormData) {
